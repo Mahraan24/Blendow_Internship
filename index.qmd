@@ -1,0 +1,102 @@
+---
+title: "An approach to train a Model to Classify Swedish Legal textual materials to specific legal area."
+description: "What 8,625 legal documents, 18 main area and 157 sub-area legal taggings taught me about labels, language, noise, and the difference between a topic classification versus a text classification on an area of law."
+author: "Mahraan Talukder"
+date: today
+date-format: "DD  MMMM, YYYY"
+categories:
+  - machine-learning
+  - nlp
+  - legal-ai
+  - multilabel
+format:
+  html:
+    toc: true
+    toc-depth: 3
+    code-fold: true
+execute:
+  freeze: true
+---
+## Context:
+
+**Blendow (Blendow Group):** Sweden’s leading legal information, media, and education provider. They are the umbrella organisation behind major Swedish legal platforms like **Dagens Juridik** and **BG Institute**.
+
+**Lexnova (Blendow Lexnova):** Blendow’s legal intelligence news agency and database. For years, it has delivered analysed court rulings, legal news, and expert commentaries, featuring a massive library of Swedish legal documents manually categorised and tagged by legal professionals.
+
+**Noxtua:** A specialised, sovereign European Legal AI platform (originally developed by tech startup Xayn alongside top law firms). It is designed specifically for legal research, analysis, and document drafting and brings AI capabilities to legal workflows under strict European data privacy standards.
+
+**In short:** Blendow-Noxtua is the combined joint launch pairing Blendow’s vast Swedish legal data and expertise (from Lexnova) with Noxtua’s dedicated legal AI engine to serve Swedish lawyers and legal departments.
+
+## The Problem
+
+For the big **Blendow–Noxtua** launch, we implemented a full AI document-processing pipeline
+to safely and reliably process Swedish legal content collected from various sources.
+The pipeline includes several steps, such as masking sensitive information, extracting metadata,
+converting documents to XML, and so on.
+
+However, much of the content we collect has never been seen by the pipeline before.
+While documents already available in the **Blendow Lexnova** database had legal areas assigned by authors and lawyers over the years,
+new material collected from outside sources arrives completely unknown and untagged.
+We needed a consistent legal-area tagging step so Noxtua could understand and process it correctly.
+
+***In the AI era, the natural first instinct is: "Why not just use an LLM to sort and classify?"***
+
+The problem is scale. We are dealing with thousands, if not eventually millions, of incoming documents.
+Moreover, running the entire pipeline is expensive on its own; adding an LLM just for classification would skyrocket both cost and processing time.
+We needed a quicker, cheaper, and more reliable approach.
+
+That is where my research and implementation of a legal-area tagging classifier using NLP and sentence embeddings came into play.
+I used the labelled content already available in Blendow Lexnova to train the model, though there were quite a few challenges along the way.
+
+1. Multilabel Nature: Legal documents usually contains references, citations etc for which a document can touch multiple legal areas to describe a case. Documents in Lexnova carry an average of 2.6 main tags.
+
+2. Imbalanced Hierarchy: The data features 157 subtags spread across 18 main legal areas. The Public Law (Offentlig rätt) is the clear heavyweight with 26 subtags, while the other main areas average just 7.7. This created a strong risk of Public Law dominating the rest.
+
+3. Mistreatment of Lexnova tags: A good number of documents on Lexnova were historically broadcasted across too many legal areas as the main purpose has been to make a document reach as many of their subscribers as possible. This increasing false positives and reducing precision.
+
+4. Documents Noise: Legal texts contain massive amounts of boilerplate noise such as headers, footers, procedural phrases, addresses, and contact details that do not really contribute in providing the legal area it belongs to.
+
+5. Complexity of Subtags: Mapping and maintaining all 157 subtags quickly proved cumbersome. For this reason, our primary focus shifted to mastering the classification on the 18 main tags first, while using a lighter approach for the subtags later on.
+
+## Approach
+
+For the research several feature representations and modelling strategies were explored.
+
+### Bag-of-words and TF-IDF
+
+A classic bag-of-words approach with `CountVectorizer` was first used to split documents into word-level features.
+TF-IDF (`TfidfVectorizer`) was then applied to the **lemmatized** text in order to surface the most characteristic keywords for each of the 18 main areas.
+
+For the character-level view, TF-IDF was run on the cleaned surface text with an n-gram range of (3, 5). This captures typical Swedish compound words and morphological patterns that word-level models often miss.
+
+### Sentence embeddings
+
+Dense semantic features were obtained from the Swedish sentence-transformer model `KBLab/sentence-bert-swedish-cased`. Each document is represented by a 768-dimensional embedding (L2-normalised).
+
+### Topic modelling (BERTopic)
+
+BERTopic was also tested. The topics it discovered were often very specific to the concrete subject of individual documents. They did not reliably indicate the broader legal main area, so the approach was set aside for the tagging task.
+
+### Hierarchical labels
+
+Because maintaining and predicting the full set of 157 subtags was cumbersome, the work concentrated on the 18 main tags. A minimal pipeline for the subtags was still built and is described later. Only main–sub pairs that actually occur together in the data were retained.
+
+### Classifier
+
+A multilayer perceptron (MLP) was chosen as the final model. An MLP is a feed-forward neural network with one or more hidden layers between the input and the output. In this case the architecture consists of three hidden layers (512 → 256 → 128 units) with a dropout rate of 0.3.
+
+The network receives the concatenated feature vector (word TF-IDF + character TF-IDF + sentence embedding, more than 2 000 dimensions) and produces 18 independent sigmoid outputs — one for each main tag. The same architecture can later be reused for the 157 subtags.
+
+Per-class decision thresholds were tuned on a validation set instead of using a single fixed threshold of 0.5.
+
+## Validation Interface
+
+A Streamlit application was built so that predictions can be checked interactively. Text taken directly from Lexnova can be pasted into the interface. The model’s predicted tags are shown side-by-side with the tags that the original authors assigned on the Lexnova website. This makes it easy to spot systematic errors and to collect corrected labels for further evaluation.
+
+## Packaging and Deployment
+
+The trained pipeline (vectorisers, chi-square indices, embedding model name, MLP weights and thresholds) is serialised with joblib into a single artefact. A thin production wrapper loads the artefact and exposes a simple `predict` method. The same artefact is used both by the Streamlit validation tool and by the real document-processing pipeline.
+
+## Summary
+
+The final system combines sparse lexical features (word and character TF-IDF with chi-square selection) and dense semantic embeddings inside a compact MLP. It produces multilabel predictions over the 18 main legal areas and can be extended to the finer 157-subtag hierarchy. The Streamlit interface and the joblib packaging make the model easy to inspect, correct and deploy.
