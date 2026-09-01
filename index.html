@@ -7,7 +7,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
 <meta name="author" content="Mahraan Talukder">
-<meta name="description" content="How 8,625 Swedish legal documents, 18 main legal areas and 157 sub-areas taught me about labels, language, noise, and the difference between “What a document is about” versus “Which legal area a document belongs to.">
+<meta name="description" content="How 8,625 Swedish legal documents, 18 main legal areas and 157 sub-areas taught me about labels, language, noise, and the difference between What a document is about versus Which legal area a document belongs to.">
 
 <title>Teaching a Model to Recognise the Area of Law in Swedish Legal Documents</title>
 <style>
@@ -44,7 +44,6 @@ ul.task-list li input[type="checkbox"] {
 <link href="index_files/libs/bootstrap/bootstrap-215b371544c282197b31c8aa00ce3677.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
 
 
-<link rel="stylesheet" href="style.css">
 </head>
 
 <body class="quarto-light">
@@ -57,18 +56,26 @@ ul.task-list li input[type="checkbox"] {
   <ul>
   <li><a href="#context" id="toc-context" class="nav-link active" data-scroll-target="#context">Context</a></li>
   <li><a href="#the-problem" id="toc-the-problem" class="nav-link" data-scroll-target="#the-problem">The Problem</a></li>
-  <li><a href="#the-legal-area-tag-hierarchy" id="toc-the-legal-area-tag-hierarchy" class="nav-link" data-scroll-target="#the-legal-area-tag-hierarchy">The Legal Area Tag Hierarchy</a></li>
+  <li><a href="#the-legal-area-tag-hierarchy" id="toc-the-legal-area-tag-hierarchy" class="nav-link" data-scroll-target="#the-legal-area-tag-hierarchy">The Legal Area Tag Hierarchy</a>
+  <ul class="collapse">
+  <li><a href="#creating-the-label-matrix" id="toc-creating-the-label-matrix" class="nav-link" data-scroll-target="#creating-the-label-matrix">Creating the Label Matrix</a></li>
+  <li><a href="#keeping-the-labels-aligned" id="toc-keeping-the-labels-aligned" class="nav-link" data-scroll-target="#keeping-the-labels-aligned">Keeping the Labels Aligned</a></li>
+  <li><a href="#teaching-the-model" id="toc-teaching-the-model" class="nav-link" data-scroll-target="#teaching-the-model">Teaching the Model</a></li>
+  </ul></li>
   <li><a href="#what-a-document-is-about-vs-which-legal-area-it-belongs-to." id="toc-what-a-document-is-about-vs-which-legal-area-it-belongs-to." class="nav-link" data-scroll-target="#what-a-document-is-about-vs-which-legal-area-it-belongs-to.">“What a document is about” Vs “Which legal area it belongs to.”</a></li>
   <li><a href="#document-text-clean-up" id="toc-document-text-clean-up" class="nav-link" data-scroll-target="#document-text-clean-up">Document Text Clean-Up</a></li>
-  <li><a href="#different-ways-to-read-a-document" id="toc-different-ways-to-read-a-document" class="nav-link" data-scroll-target="#different-ways-to-read-a-document">3 Different Ways to Read a Document</a>
+  <li><a href="#three-different-ways-to-read-a-document" id="toc-three-different-ways-to-read-a-document" class="nav-link" data-scroll-target="#three-different-ways-to-read-a-document">Three different ways to read a Document</a>
   <ul class="collapse">
   <li><a href="#looking-at-the-important-words" id="toc-looking-at-the-important-words" class="nav-link" data-scroll-target="#looking-at-the-important-words">1. Looking at the Important Words</a></li>
   <li><a href="#looking-inside-swedish-words" id="toc-looking-inside-swedish-words" class="nav-link" data-scroll-target="#looking-inside-swedish-words">2. Looking Inside Swedish Words</a></li>
   <li><a href="#looking-at-the-meaning-of-the-text" id="toc-looking-at-the-meaning-of-the-text" class="nav-link" data-scroll-target="#looking-at-the-meaning-of-the-text">3. Looking at the Meaning of the Text</a></li>
   </ul></li>
-  <li><a href="#why-i-combined-all-three" id="toc-why-i-combined-all-three" class="nav-link" data-scroll-target="#why-i-combined-all-three">Why I Combined All Three</a></li>
-  <li><a href="#teaching-the-model-to-make-the-decision" id="toc-teaching-the-model-to-make-the-decision" class="nav-link" data-scroll-target="#teaching-the-model-to-make-the-decision">Teaching the Model to Make the Decision</a></li>
-  <li><a href="#i-did-not-just-use-0.5-as-the-answer" id="toc-i-did-not-just-use-0.5-as-the-answer" class="nav-link" data-scroll-target="#i-did-not-just-use-0.5-as-the-answer">I Did Not Just Use 0.5 as the Answer</a></li>
+  <li><a href="#combining-the-dimensions-together" id="toc-combining-the-dimensions-together" class="nav-link" data-scroll-target="#combining-the-dimensions-together">Combining the dimensions together</a></li>
+  <li><a href="#the-classifier" id="toc-the-classifier" class="nav-link" data-scroll-target="#the-classifier">The Classifier</a></li>
+  <li><a href="#model-scores-and-evaluation" id="toc-model-scores-and-evaluation" class="nav-link" data-scroll-target="#model-scores-and-evaluation">Model Scores and Evaluation</a>
+  <ul class="collapse">
+  <li><a href="#confusion-matrix" id="toc-confusion-matrix" class="nav-link" data-scroll-target="#confusion-matrix">Confusion Matrix</a></li>
+  </ul></li>
   <li><a href="#the-157-sub-areas-problem" id="toc-the-157-sub-areas-problem" class="nav-link" data-scroll-target="#the-157-sub-areas-problem">The 157 Sub-Areas Problem</a></li>
   <li><a href="#making-it-something-i-could-actually-use" id="toc-making-it-something-i-could-actually-use" class="nav-link" data-scroll-target="#making-it-something-i-could-actually-use">Making It Something I Could Actually Use</a></li>
   <li><a href="#from-notebook-to-production" id="toc-from-notebook-to-production" class="nav-link" data-scroll-target="#from-notebook-to-production">From Notebook to Production</a></li>
@@ -76,11 +83,8 @@ ul.task-list li input[type="checkbox"] {
   <ul class="collapse">
   <li><a href="#labels-are-not-always-ground-truth" id="toc-labels-are-not-always-ground-truth" class="nav-link" data-scroll-target="#labels-are-not-always-ground-truth">Labels Are Not Always Ground Truth</a></li>
   <li><a href="#more-information-is-not-always-better" id="toc-more-information-is-not-always-better" class="nav-link" data-scroll-target="#more-information-is-not-always-better">More Information Is Not Always Better</a></li>
-  <li><a href="#the-representation-has-to-match-the-question" id="toc-the-representation-has-to-match-the-question" class="nav-link" data-scroll-target="#the-representation-has-to-match-the-question">The Representation Has to Match the Question</a></li>
-  <li><a href="#a-complicated-model-is-not-automatically-a-better-model" id="toc-a-complicated-model-is-not-automatically-a-better-model" class="nav-link" data-scroll-target="#a-complicated-model-is-not-automatically-a-better-model">A Complicated Model Is Not Automatically a Better Model</a></li>
   </ul></li>
   <li><a href="#where-i-am-now" id="toc-where-i-am-now" class="nav-link" data-scroll-target="#where-i-am-now">Where I Am Now</a></li>
-  <li><a href="#final-thoughts" id="toc-final-thoughts" class="nav-link" data-scroll-target="#final-thoughts">Final Thoughts</a></li>
   </ul>
 </nav>
 </div>
@@ -99,7 +103,7 @@ ul.task-list li input[type="checkbox"] {
 
 <div>
   <div class="description">
-    How 8,625 Swedish legal documents, 18 main legal areas and 157 sub-areas taught me about labels, language, noise, and the difference between “What a document is about” versus “Which legal area a document belongs to.
+    How 8,625 Swedish legal documents, 18 main legal areas and 157 sub-areas taught me about labels, language, noise, and the difference between <strong>What a document is about</strong> versus <strong>Which legal area a document belongs to</strong>.
   </div>
 </div>
 
@@ -116,7 +120,7 @@ ul.task-list li input[type="checkbox"] {
     <div>
     <div class="quarto-title-meta-heading">Published</div>
     <div class="quarto-title-meta-contents">
-      <p class="date">28 August, 2026</p>
+      <p class="date">02 September, 2026</p>
     </div>
   </div>
   
@@ -131,30 +135,33 @@ ul.task-list li input[type="checkbox"] {
 <section id="context" class="level2">
 <h2 class="anchored" data-anchor-id="context">Context</h2>
 <p><strong>Blendow (Blendow Group):</strong> Sweden’s leading legal information, media, and education provider. They are the umbrella organisation behind major Swedish legal platforms like <strong>Dagens Juridik</strong> and <strong>BG Institute</strong>. <a href="https://www.blendow.se">Read more</a></p>
-<p><strong>Lexnova (Blendow Lexnova):</strong> Blendow’s legal intelligence news agency and database. For years, it has delivered analysed court rulings, legal news, and expert commentaries, featuring a massive library of Swedish legal documents manually categorised and tagged by legal professionals. <a href="https://www.lexnova.se">Read more</a></p>
-<p><strong>Noxtua:</strong> A specialised, sovereign European Legal AI platform (originally developed by tech startup Xayn alongside top law firms). It is designed specifically for legal research, analysis, and document drafting and brings AI capabilities to legal workflows under strict European data privacy standards. <a href="https://www.noxtua.com">Read more</a></p>
-<p><strong>In short:</strong> <strong><a href="https://www.blendow.se/blendow-noxtua">Blendow-Noxtua</a></strong> is the combined joint launch pairing Blendow’s vast Swedish legal data with Noxtua’s dedicated legal AI engine to serve Swedish lawyers and legal departments.</p>
+<p><strong>Lexnova (Blendow Lexnova):</strong> Blendow’s legal intelligence news agency and database. For years, it has delivered analysed court rulings, legal news, and expert commentaries, with a large library of Swedish legal documents manually categorised and tagged by legal professionals. <a href="https://www.lexnova.se">Read more</a></p>
+<p><strong>Noxtua:</strong> A specialised European Legal AI platform, originally developed by tech startup Xayn together with leading law firms. It is designed for legal research, analysis, and document drafting and brings AI capabilities to legal workflows under European data protection standards. <a href="https://www.noxtua.com">Read more</a></p>
+<p><strong>In short:</strong> <strong><a href="https://www.blendow.se/blendow-noxtua">Blendow-Noxtua</a></strong> is the joint launch combining Blendow’s Swedish legal data with Noxtua’s legal AI technology to serve Swedish lawyers and legal departments.</p>
 </section>
 <section id="the-problem" class="level2">
 <h2 class="anchored" data-anchor-id="the-problem">The Problem</h2>
 <p>For the big <strong>Blendow–Noxtua</strong> launch, we implemented a full AI document-processing pipeline to safely and reliably process Swedish legal content collected from various sources. The pipeline includes several steps, such as masking sensitive information, extracting metadata, converting documents to XML, and so on.</p>
-<p>However, much of the content we collect has never been seen by the pipeline before. While documents already available in the <strong>Blendow Lexnova</strong> database had legal areas assigned by authors and lawyers over the years, new material collected from outside sources arrives completely unknown and untagged. We needed a consistent legal-area tagging step so Noxtua could understand and process our data correctly.</p>
+<p>However, much of the content we collect has never been seen by the pipeline before. While documents already available in the <strong>Blendow Lexnova</strong> database had legal areas assigned by authors and lawyers over the years, new material collected from outside sources arrives completely unknown and untagged.</p>
+<p>We needed a consistent legal-area tagging step so <strong>Noxtua</strong> could understand and process our data correctly.</p>
 <blockquote class="blockquote">
 <p><em>In the AI era, the natural first instinct is: “Why not just use a Large Language Model (LLM) to sort and classify?”</em></p>
 </blockquote>
-<p>The problem is scale. We are dealing with thousands, if not eventually millions, of incoming documents. Moreover, running the entire pipeline is expensive on its own; adding an LLM just for classification would skyrocket both cost and processing time. We needed a quicker, cheaper, and more reliable approach.</p>
-<p>That is where my research and implementation of a legal-area tagging classifier using NLP and sentence embeddings came into play. I used the labelled content already available in Blendow Lexnova to train the model, though there were quite a few challenges along the way.</p>
+<p><strong><em>The problem is scale.</em></strong></p>
+<p>We are dealing with thousands, if not eventually millions, of incoming documents. Moreover, running the entire pipeline is expensive on its own; adding an LLM just for classification would skyrocket both cost and processing time.</p>
+<p>We therefore needed an approach that was faster, cheaper, and predictable enough to run as part of a larger processing pipeline.</p>
+<p>That is where my research and implementation of a legal-area tagging classifier using NLP and sentence embeddings came into play. I used the labelled content already available in <strong>Blendow Lexnova</strong> to train the model, though there were quite a few challenges along the way.</p>
 <ol type="1">
-<li><p><strong>Multilabel Nature:</strong> Legal documents usually contain references, citations etc. for which a document can touch multiple legal areas to describe a case. Documents in Lexnova carry an average of 2.6 main tags.</p></li>
+<li><p><strong>Multilabel Nature:</strong> Legal documents usually contain references, citations etc. for which a document can touch multiple legal areas to describe a case. Documents in Lexnova carry an average of <strong>2.6 main tags</strong>.</p></li>
 <li><p><strong>Imbalanced Hierarchy:</strong> The data features 157 subtags spread across 18 main legal areas. <code>Offentlig rätt</code> (Public Law) is the clear heavyweight with 26 subtags, while the other main areas on average has 7.7 subtags. This created a strong risk of Public Law dominating the rest.</p></li>
 <li><p><strong>Mistreatment of Lexnova tags:</strong> A good number of documents on Lexnova were historically broadcasted across too many legal areas, as the main purpose has been to make a document reach as many of their subscribers as possible and not whether the document really belong to those tags. This increased false positives and reduced precision.</p></li>
 <li><p><strong>Document Noise:</strong> Legal texts contain massive amounts of boilerplate noise such as headers, footers, procedural phrases, addresses, and contact details that do not really contribute to providing the legal area it belongs to.</p></li>
-<li><p><strong>Complexity of Subtags:</strong> Mapping and maintaining all 157 subtags quickly proved cumbersome. For this reason, our primary focus shifted to mastering the classification on the 18 main tags first, while using a lighter approach for the subtags later on.</p></li>
+<li><p><strong>Complexity of Subtags:</strong> Mapping and maintaining all 157 subtags quickly proved complicated. For this reason, our primary focus shifted to mastering the classification on the 18 main tags first, while using a lighter approach for the subtags later on.</p></li>
 </ol>
 </section>
 <section id="the-legal-area-tag-hierarchy" class="level2">
 <h2 class="anchored" data-anchor-id="the-legal-area-tag-hierarchy">The Legal Area Tag Hierarchy</h2>
-<p>The labels were organised like a two-level family tree, with 18 broad legal areas at the top and 157 more specific sub-areas underneath them. A simplified part of the hierarchy looks like this:</p>
+<p>The labels were organised like a two-level family tree, with <strong>18 broad legal areas</strong> at the top and <strong>157 more specific sub-areas</strong> underneath them. A simplified part of the hierarchy looks like this:</p>
 <table class="caption-top table">
 <colgroup>
 <col style="width: 36%">
@@ -186,31 +193,107 @@ ul.task-list li input[type="checkbox"] {
 </tr>
 </tbody>
 </table>
-<p>The full hierarchy was much larger and uneven. Some branches contained far more sub-areas and documents than others, while a single document could have several sub-area tags from different branches. The task therefore could not be treated as choosing only one legal area, and the larger branches could easily dominate the smaller ones.</p>
-<p>For the experiment, I mapped each document’s existing sub-area tags to their broader parent areas. If several sub-areas pointed to the same parent, I kept that parent only once. If they pointed to different parents, I kept all of them.</p>
-<p>For example, one document might have the following subtags:</p>
+<p>The complete hierarchy was much larger and uneven. Some branches contained far more sub-areas and documents than others. A single document could have several sub-area tags from different branches. This meant that the task could not simply be treated as choosing <strong>one</strong> legal area. The model needed to be able to assign <strong>several main legal areas to the same document</strong>.</p>
+<p>For the experiment, I used the existing hierarchy to map each document’s <strong>sub-area tags</strong> to their broader <strong>parent areas</strong>. If several sub-areas belonged to the same parent, that parent was kept only once. If they belonged to different parents, all of those parents were kept.</p>
+<p>For example, one document might have these <strong>sub-area tags</strong>:</p>
 <blockquote class="blockquote">
 <p><strong>[“Avtalsrätt”, “Fri rörlighet”, “Europakonventionen”]</strong></p>
 </blockquote>
 <p>Using the existing hierarchy:</p>
 <ul>
-<li><code>Avtalsrätt</code> (Contract Law) belongs to <code>Affärsjuridik</code> (Commercial / Business Law).</li>
-<li><code>Fri rörlighet</code> (Free Movement) belongs to <code>Europeisk rätt</code>.</li>
-<li><code>Europakonventionen</code> (European Convention on Human Rights) also belongs to <code>Europeisk rätt</code> (European Union Law).</li>
+<li><code>Avtalsrätt</code> (Contract Law) <strong>subtag</strong> belongs to <code>Affärsjuridik</code> (Commercial / Business Law) <strong>main tag</strong>.</li>
+<li><code>Fri rörlighet</code> (Free Movement) <strong>subtag</strong> belongs to <code>Europeisk rätt</code> <strong>main tag</strong>.</li>
+<li><code>Europakonventionen</code> (European Convention on Human Rights) <strong>subtag</strong> also belongs to <code>Europeisk rätt</code> (European Union Law) <strong>main tag</strong>.</li>
 </ul>
-<p>Because the last two sub-areas share the same parent, <code>Europeisk rätt</code> is kept only once. The document therefore receives two main areas:</p>
+<p>The last two sub-areas therefore point to the <strong>same parent</strong>. The document therefore receives two main legal areas:</p>
 <blockquote class="blockquote">
 <p><strong>[“Affärsjuridik”, “Europeisk rätt”]</strong></p>
 </blockquote>
-<p>I then used <code>MultiLabelBinarizer</code> to create a document-by-legal-area matrix. Each cell contains <code>1</code> when a legal area applies to a document and <code>0</code> when it does not.</p>
-<p>For this example, the matrix would contain:</p>
+<p>This step turned the original collection of 157 specific sub-areas into the <strong>18 main legal-area labels</strong> that the model was trained to predict.</p>
+<section id="creating-the-label-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="creating-the-label-matrix">Creating the Label Matrix</h3>
+<p>The next step was to turn these labels into numbers using <code>MultiLabelBinarizer</code>. The result is a <strong>document-by-legal-area matrix</strong>:</p>
+<ul>
+<li><strong>1</strong> means the legal area applies to the document.</li>
+<li><strong>0</strong> means it does not.</li>
+</ul>
+<p>For example:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Document</th>
+<th style="text-align: right;">Affärsjuridik</th>
+<th style="text-align: right;">Europeisk rätt</th>
+<th style="text-align: right;">Miljörätt</th>
+<th style="text-align: right;">Skatterätt</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Document A</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="even">
+<td>Document B</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+</tr>
+<tr class="odd">
+<td>Document C</td>
+<td style="text-align: right;">1</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">0</td>
+<td style="text-align: right;">1</td>
+</tr>
+</tbody>
+</table>
+<p>Document A therefore belongs to both <code>Affärsjuridik</code> and <code>Europeisk rätt</code>.</p>
+<p>This matrix is essentially the model’s <strong>answer sheet</strong>. It does not contain the document text; it contains the legal areas that the model is expected to learn to predict.</p>
+</section>
+<section id="keeping-the-labels-aligned" class="level3">
+<h3 class="anchored" data-anchor-id="keeping-the-labels-aligned">Keeping the Labels Aligned</h3>
+<p>The documents were divided into three separate groups:</p>
 <blockquote class="blockquote">
-<p><strong>Affärsjuridik = 1, Europeisk rätt = 1, all other areas = 0</strong></p>
+<p><strong>Training set:</strong> Documents the model is allowed to learn from. <br> <strong>Validation set:</strong> Documents used to evaluate the model while developing and tuning it. <br> <strong>Test set:</strong> Documents kept aside for the final evaluation.</p>
 </blockquote>
-<p>This matrix did not contain the document text. Instead, it worked as the model’s answer sheet, showing the correct legal areas for every document.</p>
-<p>When I later divided the documents into training, validation, and test sets, I divided the matrix using the same document row indices. For example, if document <code>row 42</code> is assigned to training set <strong>X_train</strong>, <code>row 42</code> of the label matrix must also go into the training set <strong>Y_train</strong>. While the remaining rows became <strong>Y_val</strong> and <strong>Y_test</strong>. This kept every document aligned with its correct answers.</p>
-<p>This is used in the later part of the experiment, where the model produced 18 scores for each document. Those scores were compared with the matching row in <strong>Y_train</strong>. If the model gave a low score to an area marked 1, or a high score to an area marked 0, it was treated as an error. The model then adjusted itself to make a better prediction the next time.</p>
-<p>The validation and test parts of the matrix were later used to check how well the model had learned. In this way, the matrix preserved the multilabel hierarchy and provided the correct answers needed to train and evaluate the model.</p>
+<p>The same separation must also be applied to the labels.</p>
+<blockquote class="blockquote">
+<p>If a document goes into X_train, its labels must go into Y_train. <br> If a document goes into X_validation, its labels must go into Y_validation. <br> And if a document goes into X_test, its labels must go into Y_test.</p>
+</blockquote>
+<p>In simple terms:</p>
+<blockquote class="blockquote">
+<p><strong>X = what the model sees</strong> <br> <strong>Y = what the model should predict</strong></p>
+</blockquote>
+<p>This ensures document features and their labels must remain aligned throughout the experiment.</p>
+</section>
+<section id="teaching-the-model" class="level3">
+<h3 class="anchored" data-anchor-id="teaching-the-model">Teaching the Model</h3>
+<p>During training, the model receives a document from <code>X_train</code>. It produces <strong>18 scores</strong>, one for each main legal area. For example:</p>
+<p>Example:</p>
+<blockquote class="blockquote">
+<p><strong>Affärsjuridik = 0.91</strong>, <strong>Skatterätt = 0.08</strong>, <strong>Processrätt = 0.72</strong>, <strong>Miljörätt = 0.14</strong>, <strong>…</strong></p>
+</blockquote>
+<p>These scores represent how strongly the model believes that each legal area applies to the document. The model can then compare its output with the actual labels in <code>Y_train</code>.</p>
+<p>Suppose the correct answer is:</p>
+<blockquote class="blockquote">
+<p><strong>Affärsjuridik = 1</strong> <strong>Skatterätt = 0</strong> <strong>Processrätt = 1</strong> <strong>Miljörätt = 0</strong></p>
+</blockquote>
+<p>A high score for <code>Affärsjuridik</code> is therefore useful, while a high score for <code>Skatterätt</code> would be a mistake. Likewise, giving <code>Processrätt</code> a very low score would be a mistake because that area is actually present.</p>
+<p>These differences contribute to a value called the <strong>training loss</strong>. The loss can be thought of as a way of telling the model:</p>
+<blockquote class="blockquote">
+<p><strong>“How far were your predictions from the correct answers?”</strong></p>
+</blockquote>
+<p>The model then adjusts its internal parameters to reduce this loss. By repeating this process over many training documents, it gradually learns patterns that connect the document features to the legal areas.</p>
+<p>In simple terms, the model is learning:</p>
+<blockquote class="blockquote">
+<p><strong>“When I see these kinds of words, character patterns, and semantic representations, these legal areas are more likely to apply.”</strong></p>
+</blockquote>
+</section>
 </section>
 <section id="what-a-document-is-about-vs-which-legal-area-it-belongs-to." class="level2">
 <h2 class="anchored" data-anchor-id="what-a-document-is-about-vs-which-legal-area-it-belongs-to.">“What a document is about” Vs “Which legal area it belongs to.”</h2>
@@ -219,13 +302,13 @@ ul.task-list li input[type="checkbox"] {
 <p>What actually happened was more revealing than I expected.</p>
 <p><strong>BERTopic</strong> did find coherent clusters. The topics were often tight, readable, and clearly about something specific. Looking at one of the runs, the model produced groups such as:</p>
 <ul>
-<li>Court language about whether parties are bound by a valuation under <strong>AB 04</strong> (a standard set of general conditions used for execution contracts in the Swedish construction industry)</li>
-<li>Questions about which foreign taxes can be credited against Swedish tax</li>
-<li>Consequence assessments under the GDPR when processing children’s personal data</li>
-<li>Anti-money-laundering obligations that apply specifically to auditors and accounting firms</li>
-<li>Hearing techniques and procedural strategies when children give evidence in court</li>
-<li>Rules that apply when a company is sold and the purchase price has to be adjusted</li>
-<li>Practical employment-law issues for managers, covering the whole journey from hiring to dismissal</li>
+<li><p>Court language about whether parties are bound by a valuation under <strong>AB 04</strong> (a standard set of general conditions used for execution contracts in the Swedish construction industry)</p></li>
+<li><p>Questions about which foreign taxes can be credited against Swedish tax</p></li>
+<li><p>Consequence assessments under the GDPR when processing children’s personal data</p></li>
+<li><p>Anti-money-laundering obligations that apply specifically to auditors and accounting firms</p></li>
+<li><p>Hearing techniques and procedural strategies when children give evidence in court</p></li>
+<li><p>Rules that apply when a company is sold and the purchase price has to be adjusted</p></li>
+<li><p>Practical employment-law issues for managers, covering the whole journey from hiring to dismissal</p></li>
 </ul>
 <p>Each of these topics is genuinely about a concrete subject. You can read the top words and the representative documents and immediately understand what the texts discuss. The problem is that “what the document is about” is not the same as “which area of law the document belongs to.” This became one of the most important lessons of the project.</p>
 <p>A topic such as “hearing techniques when children give evidence” is a very specific procedural issue. In the Lexnova taxonomy it would sit under the much broader label <code>Processrätt</code> (Procedural Law). A cluster about money-laundering rules for auditors belongs somewhere inside <code>Affärsjuridik</code> (Commercial/Business Law) or a related regulatory area. A detailed discussion of foreign-tax credits is clearly tax law, yet the topic itself is narrower than the main area <code>Skatterätt</code> (Tax Law).</p>
@@ -238,107 +321,154 @@ ul.task-list li input[type="checkbox"] {
 <p>So instead of simply giving the raw document to the model, I built a cleaning step.</p>
 <p>The cleaning process roughly works like this:</p>
 <ol type="1">
-<li>Remove XML tags: As the pipeline will be sending XML text to the classifier, it is important to remove the XML tags and get one combined document text</li>
-<li>Strip noise: RegEx solutions were used to replace all the URLs, emails, phone numbers, page markers, personal numbers, organisation numbers, addresses and other boilerplate with an empty string (““)</li>
-<li>Normalise dates and legal references (SFS, case numbers, etc.) into simple placeholders: RegEx solutions were used to simply replace legal references like Swedish Code of Statutes (SFS) and case numbers etc with placeholder words like “SFS”, “CASENUMBER” etc.</li>
-<li>Collapse extra whitespace and dividers: to remove whitespaces and get a chunk of text for easier work or sentence persing.</li>
-<li>Optionally remove exact or near-duplicate sentences: legal documents could often have duplicate repeated sentences,</li>
-<li>Run spaCy: tokenise, optionally drop person names, keep surface forms and lemmas: spaCy was used to replace actual people’s names with a placeholder word PERSON using the ner solution. Further more the entire text is lemmatised, meaning that all the words in the documents turns to there root form <strong>exampl</strong> <strong>english translation</strong></li>
-<li>Produce two outputs: clean_text (original words) and lemma_text (lemmatised version).</li>
+<li><p>Remove XML tags: As the pipeline will be sending XML text to the classifier, it is important to remove the XML tags and get one combined document text</p></li>
+<li><p>Strip noise: RegEx solutions were used to replace all the URLs, emails, phone numbers, page markers, personal numbers, organisation numbers, addresses and other boilerplate with an empty string (““)</p></li>
+<li><p>Normalise dates and legal references (SFS, case numbers, etc.) into simple placeholders: RegEx solutions were used to simply replace legal references like Swedish Code of Statutes (SFS) and case numbers etc with placeholder words like “SFS”, “CASENUMBER” etc.</p></li>
+<li><p>Collapse extra whitespace and dividers: to remove whitespaces and get a chunk of text for easier work or sentence persing.</p></li>
+<li><p>Optionally remove exact or near-duplicate sentences: legal documents could often have duplicate repeated sentences,</p></li>
+<li><p>Run spaCy: tokenise, optionally drop person names, keep surface forms and lemmas: spaCy was used to replace actual people’s names with a placeholder word PERSON using the ner solution. Further more the entire text is lemmatised, meaning that all the words in the documents turns to there root form of that word.</p></li>
+<li><p>Produce two outputs: <strong>clean_text</strong> (original words) and <strong>lemma_text</strong> (lemmatised version).</p></li>
 </ol>
 <p>Lemmatization is particularly useful for Swedish because words can change their form and Swedish compound words can become very long.</p>
 <p>The point is not to remove as much text as possible but to remove information that describes <strong>the document itself</strong> rather than <strong>the legal subject of the document</strong>. That distinction became surprisingly important.</p>
 </section>
-<section id="different-ways-to-read-a-document" class="level2">
-<h2 class="anchored" data-anchor-id="different-ways-to-read-a-document">3 Different Ways to Read a Document</h2>
+<section id="three-different-ways-to-read-a-document" class="level2">
+<h2 class="anchored" data-anchor-id="three-different-ways-to-read-a-document">Three different ways to read a Document</h2>
 <p>A document can tell us something through the individual words it uses, through the smaller pieces inside those words, and through the meaning of whole sentences. So I gave the model three different views of the same document.</p>
 <section id="looking-at-the-important-words" class="level3">
 <h3 class="anchored" data-anchor-id="looking-at-the-important-words">1. Looking at the Important Words</h3>
 <p>The first view is the most traditional one.</p>
-<p>The model looks at which words appear in a document and how important they are compared with the rest of the collection.</p>
-<p>This is <strong>TF-IDF</strong>.</p>
+<p>The model looks at which words appear in a document and how important they are compared with the rest of the collection. This is <strong>TF-IDF</strong>.</p>
 <p>A simple way of thinking about it is:</p>
 <blockquote class="blockquote">
 <p>If a word appears everywhere, it probably tells us very little. If a word appears frequently in documents about one particular legal area, it may be much more useful.</p>
 </blockquote>
-<p>For example, generic legal words like <strong>Lag</strong> (Law), <strong>Domstal</strong> (Court) or <strong>Mål</strong> (Case) appear in almost every document and therefore is not very helpful for deciding the area of law.</p>
-<p>A more specialised term that repeatedly appears in employment-law like <strong>Arbetare</strong> (Worker/Employee) or the word “Patent” in intellectual-property-law documents can be much more useful.</p>
-<p>I used TF-IDF on the lemmatised Swedish text and then selected the features that showed the strongest relationship with the legal-area labels.</p>
-<p>This selection step is called <strong>chi-square feature selection</strong>, but the basic idea is simply:</p>
-<blockquote class="blockquote">
-<p>Keep the words that seem to help distinguish the legal areas and remove a lot of the unnecessary vocabulary.</p>
-</blockquote>
+<p>For example, generic legal words like <strong>Lag</strong> (Law), <strong>Dom</strong> (Judgment) or <strong>Mål</strong> (Case) appear in almost every document and therefore is not very helpful for deciding the area of law.</p>
+<p>On the other hand, a more specialised term like <strong>Arbetare</strong> (Worker/Employee) repeatedly appears in employment-law and the word <strong>Patent</strong> in intellectual-property-law documents. Since these words are specific to a particular legal area, they can be much more useful.</p>
+<p>I used TF-IDF on the lemmatised Swedish text, lemmatisation gets all the words to their root form, so words like <strong>ska</strong>, <strong>skall</strong> and <strong>skulle</strong> all turns to their root form <strong>skola</strong> (shall / will), has shown in the table below:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Swedish word</th>
+<th>Lemma</th>
+<th>English example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>ska</strong></td>
+<td><strong>skola</strong></td>
+<td>For <strong>ska</strong>: <em>I <strong>will</strong> go to court.</em></td>
+</tr>
+<tr class="even">
+<td><strong>skall</strong></td>
+<td><strong>skola</strong></td>
+<td>For <strong>skall</strong>: <em>The parties <strong>shall</strong> comply with the agreement.</em></td>
+</tr>
+<tr class="odd">
+<td><strong>skulle</strong></td>
+<td><strong>skola</strong></td>
+<td>For <strong>skulle</strong>: <em>I <strong>would</strong> go to court.</em></td>
+</tr>
+</tbody>
+</table>
+<p>it is difficult to provide a direct English translation of <strong>ska</strong>, <strong>skall</strong> and <strong>skulle</strong> as that depends on the context they are being used. I have attached a close enough sentence in English for each of them which should provide a basic idea of how all these three words has a common root word <strong>skola</strong>.</p>
+<p>From the TF-IDF terms I received from the lemmatised text, I selected the features that showed the strongest relationship with the 18 legal-area labels. Example of the top 5 terms in each of the 18 legal areas are given below:</p>
+<p>Original (In Swedish) <img src="./images/img_wrd.png" class="img-fluid" alt="top 5 words per legal area"> Translated (In English) <img src="./images/img_wrd_en.png" class="img-fluid" alt="top 5 words per legal area in En"></p>
 </section>
 <section id="looking-inside-swedish-words" class="level3">
 <h3 class="anchored" data-anchor-id="looking-inside-swedish-words">2. Looking Inside Swedish Words</h3>
 <p>The second view was at the character level.</p>
-<p>This may sound strange at first. Instead of only asking <em>“what words are here?”</em>, the model also asks <em>“what small patterns inside the words are here?”</em></p>
-<p>This is especially useful for Swedish.</p>
-<p>Swedish can create long compound words, where several concepts are joined together into one word. Two words can therefore be related even when the exact full word has not appeared before.</p>
-<p>By looking at groups of 3–5 characters, the model can pick up these smaller patterns.</p>
+<p>This may sound strange at first. Instead of only asking <em>“what words are here?”</em>, the model also looks for <em>“what small patterns inside the words are present?”</em></p>
+<p>This is especially useful for Swedish as a language, as Swedish can create long compound words, where several concepts are joined together into one word. Two words can therefore be related even when the exact full word has not appeared before.</p>
+<p>By looking at groups of 3–5 characters, the model can pick up these smaller patterns. Example of the top 5 such words are given below.</p>
+<p>Original (In Swedish) <img src="./images/img_char.png" class="img-fluid" alt="top 5 chars per legal area"> Translated (In English) <img src="./images/img_char_en.png" class="img-fluid" alt="top 5 chars per legal area in En"></p>
 <p>This gave the model another way of recognising legal terminology that a normal word-based approach could miss.</p>
 </section>
 <section id="looking-at-the-meaning-of-the-text" class="level3">
 <h3 class="anchored" data-anchor-id="looking-at-the-meaning-of-the-text">3. Looking at the Meaning of the Text</h3>
 <p>The third view is quite different.</p>
-<p>Instead of counting words, I used a Swedish sentence-embedding model called <code>KBLab/sentence-bert-swedish-cased</code>.</p>
-<p>The idea behind an embedding is easier to understand if we imagine turning a document into a point on a map.</p>
-<p>Documents with similar meanings should end up relatively close together.</p>
-<p>Documents with very different meanings should end up further apart.</p>
-<p>So instead of only learning that two documents contain similar words, the model gets another signal about whether the documents are <strong>semantically similar</strong>.</p>
-<p>This is important because two legal documents can describe similar ideas without using exactly the same vocabulary.</p>
+<p>Instead of simply counting words, I used a Swedish sentence-embedding model called <a href="https://huggingface.co/KBLab/sentence-bert-swedish-cased"><code>KBLab/sentence-bert-swedish-cased</code></a>. This model has a maximum input length of <strong>384 tokens</strong>. Therefore, before creating an embedding, I limited each document to its <strong>first 384 tokens</strong>. This first 384 tokens always includes the <strong>title</strong> and <strong>introduction</strong> of a document, which are often the most valuable components for predicting the legal area of a document. Any text after those 384 tokens was not used for the embedding.</p>
+<p>This was important as passing the full documents into the embedding model would take considerably longer processing time, even though the model could only process up to its maximum input length. Explicitly limiting the input made the behaviour predictable by avoiding time preparing text that would not contribute to the final embedding.</p>
+<p>The embedding model then converts those 384 tokens into a <strong>768-dimensional numerical representation</strong>, often called an <em>embedding</em>. The idea behind an embedding is easier to understand if we imagine turning each document into a point on a map. Documents with similar meanings should end up relatively close together, while documents with very different meanings should end up further apart.</p>
+<p>So instead of only learning that two documents contain similar words, the classifier receives another signal about whether the documents are <strong>semantically similar</strong>.</p>
+<p>This is useful because two legal documents can discuss similar ideas without using exactly the same vocabulary.</p>
 </section>
 </section>
-<section id="why-i-combined-all-three" class="level2">
-<h2 class="anchored" data-anchor-id="why-i-combined-all-three">Why I Combined All Three</h2>
+<section id="combining-the-dimensions-together" class="level2">
+<h2 class="anchored" data-anchor-id="combining-the-dimensions-together">Combining the dimensions together</h2>
 <p>At this point I had three different ways of looking at the same document:</p>
-<p><strong>Words</strong> → What important terms does it use?</p>
-<p><strong>Character patterns</strong> → What Swedish word structures and fragments does it contain?</p>
-<p><strong>Meaning</strong> → What is the document broadly talking about?</p>
+<p><strong>Words</strong> which answers “What important terms does it use?”</p>
+<p><strong>Character patterns</strong> answers “What Swedish word structures and fragments does it contain?”</p>
+<p><strong>Meaning</strong> answers “What is the document broadly talking about?”</p>
 <p>None of these views is perfect on its own.</p>
 <p>But together they provide a much richer description of the document.</p>
-<p>The final model therefore combines the three representations into one large description of each document.</p>
-<p>The resulting feature vector is then passed to the classifier.</p>
+<p>The final model therefore combines the three representations into one feature vector for each document.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/img_dim_fusion.png" class="img-fluid figure-img"></p>
+<figcaption>Combined Dimensions</figcaption>
+</figure>
+</div>
+<p>The resulting feature vector is then passed to the <strong>classifier</strong>.</p>
 </section>
-<section id="teaching-the-model-to-make-the-decision" class="level2">
-<h2 class="anchored" data-anchor-id="teaching-the-model-to-make-the-decision">Teaching the Model to Make the Decision</h2>
-<p>The final classifier is a small neural network called a <strong>Multilayer Perceptron (MLP)</strong>.</p>
-<p>The important thing is not really the name.</p>
-<p>Conceptually, it works like a series of decision-making layers.</p>
-<p>The first layer receives all the information we extracted from the document.</p>
-<p>The following layers gradually combine these signals.</p>
-<p>At the end, the model produces 18 separate answers — one for each main legal area.</p>
-<p>This is important because a document does not necessarily belong to only one area.</p>
-<p>For example, a document could be relevant to both employment law and insurance law.</p>
+<section id="the-classifier" class="level2">
+<h2 class="anchored" data-anchor-id="the-classifier">The Classifier</h2>
+<p>The final classifier is a small neural network called a <strong>Multilayer Perceptron (MLP)</strong>. The important thing is not really the name but the concept. It works like a series of decision-making layers.</p>
+<p>The first layer receives all the information we extracted from the document in the 2000+ feature vectors, shown above. The following layers gradually combine these signals. At the end, the model produces 18 separate answers, one for each main legal area. This is important because a document does not necessarily belong to only one area.</p>
 <p>So the model does not simply answer:</p>
 <blockquote class="blockquote">
-<p>“This document is X.”</p>
+<p>“This document belongs to ‘X’ legal area.”</p>
 </blockquote>
-<p>Instead, it effectively answers:</p>
+<p>Instead, it answers:</p>
 <blockquote class="blockquote">
 <p>“How likely is this document to belong to each of these 18 legal areas?”</p>
 </blockquote>
 <p>The system can then select more than one area when appropriate.</p>
-<p>That is why this is a <strong>multilabel classification</strong> problem rather than an ordinary single-label classification problem.</p>
 </section>
-<section id="i-did-not-just-use-0.5-as-the-answer" class="level2">
-<h2 class="anchored" data-anchor-id="i-did-not-just-use-0.5-as-the-answer">I Did Not Just Use 0.5 as the Answer</h2>
-<p>There was another small but important problem.</p>
-<p>A model produces probabilities, but at some point we have to decide what probability is high enough to count as a prediction.</p>
-<p>The obvious choice would be:</p>
+<section id="model-scores-and-evaluation" class="level2">
+<h2 class="anchored" data-anchor-id="model-scores-and-evaluation">Model Scores and Evaluation</h2>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/img_scores.png" class="img-fluid figure-img"></p>
+<figcaption>Model Scores</figcaption>
+</figure>
+</div>
+<p>The figure above shows the model’s output scores for the different legal areas. Each document receives one score for each of the 18 labels. These scores represent how strongly the trained classifier associates the document with each legal area. The important point is that these scores are <strong>not simply one final class</strong>. Several areas can receive high scores for the same document.</p>
+<p>For example, a document might receive something conceptually like:</p>
 <blockquote class="blockquote">
-<p>Above 50% → yes Below 50% → no</p>
+<p><strong>Affärsjuridik: 0.91</strong> <strong>Försäkringsrätt: 0.78</strong> <strong>Skatterätt: 0.12</strong> <strong>Processrätt: 0.08</strong></p>
 </blockquote>
-<p>But legal areas are not equally common, and the model is not equally confident about every area.</p>
-<p>A threshold that works well for one legal area may be too strict or too relaxed for another.</p>
-<p>So instead of forcing every legal area to use the same threshold, I tuned a separate decision threshold for each of the 18 areas.</p>
-<p>In other words, the model gets to say:</p>
-<blockquote class="blockquote">
-<p>“I am confident enough to call this Employment Law.”</p>
-</blockquote>
-<p>while being more cautious about another area where it has less evidence.</p>
-<p>This was a small change in the code, but conceptually it is important because the goal is not simply to make the model produce as many labels as possible.</p>
-<p>The goal is to make the labels useful.</p>
+<p>The system can therefore select both <code>Affärsjuridik</code> and <code>Försäkringsrätt</code> rather than forcing the document into a single category.</p>
+<p>To turn these scores into labels, a decision threshold is applied. Scores above the chosen threshold are treated as positive predictions, while scores below it are treated as negative predictions.</p>
+<p>A model that uses a very low threshold will tend to assign more legal areas. That can increase <strong>recall</strong>, because fewer relevant labels are missed, but it can also reduce <strong>precision</strong>, because more incorrect labels are added.</p>
+<p>A higher threshold does the opposite: it produces fewer predictions, potentially improving precision but missing some genuinely relevant areas. This is especially important in this dataset because the historical Lexnova labels are themselves not perfectly clean.</p>
+<section id="confusion-matrix" class="level3">
+<h3 class="anchored" data-anchor-id="confusion-matrix">Confusion Matrix</h3>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/img_cm.png" class="img-fluid figure-img"></p>
+<figcaption>Model Confusion Matrix</figcaption>
+</figure>
+</div>
+<p>The confusion matrix gives another way to inspect the model’s behaviour.</p>
+<p>For a multilabel problem, the matrix can be interpreted label by label: for each legal area, we can examine how often the model correctly identified that area, missed it, or incorrectly assigned it.</p>
+<p>The main quantities are:</p>
+<ul>
+<li><strong>True Positive (TP):</strong> The document belongs to the legal area and the model predicted it. <br></li>
+<li><strong>False Positive (FP):</strong> The model predicted the legal area, but the document was not labelled with it. <br></li>
+<li><strong>False Negative (FN):</strong> The document was labelled with the legal area, but the model failed to predict it. <br></li>
+<li><strong>True Negative (TN):</strong> The document does not belong to the legal area and the model correctly left it unassigned.</li>
+</ul>
+<p>From these values we can calculate standard classification metrics:</p>
+<p><strong>Precision</strong> asks <strong><em>When the model predicts a legal area, how often is it correct?</em></strong> <br> <strong>Recall</strong> asks <strong><em>Of the documents that should have received a legal area, how many did the model find?</em></strong> <br> <strong>F1 score</strong> combines precision and recall into a single measure, balancing the two.</p>
+<p>For this project, looking at these metrics per legal area is more informative than relying on one overall accuracy number. A model could achieve a seemingly strong overall result while performing poorly on smaller or less frequent legal areas.</p>
+</section>
 </section>
 <section id="the-157-sub-areas-problem" class="level2">
 <h2 class="anchored" data-anchor-id="the-157-sub-areas-problem">The 157 Sub-Areas Problem</h2>
@@ -355,43 +485,44 @@ ul.task-list li input[type="checkbox"] {
 <p>A model that only exists inside a notebook is not particularly useful.</p>
 <p>I wanted to be able to paste a real Swedish legal document into the system and see what it thinks.</p>
 <p>So I built a small <strong>Streamlit interface</strong> around the classifier.</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/img_ui.png" class="img-fluid figure-img"></p>
+<figcaption>ui</figcaption>
+</figure>
+</div>
 <p>The interface allows me to:</p>
 <ol type="1">
 <li>paste a document;</li>
 <li>run the classifier;</li>
 <li>see the predicted legal areas;</li>
 <li>see the model’s scores for the different areas;</li>
-<li>correct the prediction;</li>
-<li>save the corrected result.</li>
+<li>correct the prediction by manual input;</li>
+<li>save the corrected result in a CSV file.</li>
 </ol>
-<p>This last part is particularly important.</p>
-<p>The interface is not only a demonstration.</p>
-<p>It also gives me a way to <strong>challenge the model</strong>.</p>
-<p>If I see that the model repeatedly assigns the wrong legal area to a certain type of document, that gives me something concrete to investigate.</p>
-<p>The saved results can then be used to compare the predicted labels against the corrected labels and calculate things such as precision, recall and F1 score.</p>
-<p>The application also checks whether a document title was already present in the training data. This is useful because a prediction on something the model has effectively seen before can give a misleadingly optimistic impression of how well the model performs.</p>
+<p>This last part is particularly important. The interface is not only a demonstration. It also gives me a way to <strong>challenge the model</strong>. If I see that the model repeatedly assigns the wrong legal area to a certain type of document, that gives me something concrete to investigate. The saved results can then be used to compare the predicted labels against the corrected labels (that I manually enter) and calculate things such as precision, recall and F1 score. The application also checks whether a document title was already present in the training data from the JSON file of all the documents’ titles saved as hashes. Before pasting a document I first paste the title to check whether it matches with any of the hashed train document title. This is useful because a prediction on something the model has effectively seen before can give a misleadingly optimistic impression of how well the model performs.</p>
+<p>Moreover, there is a Dashboard that shows the statistics of all the saved manual examples,</p>
+<div class="quarto-figure quarto-figure-center">
+<figure class="figure">
+<p><img src="./images/img_dashboard.png" class="img-fluid figure-img"></p>
+<figcaption>dashboard</figcaption>
+</figure>
+</div>
 </section>
 <section id="from-notebook-to-production" class="level2">
 <h2 class="anchored" data-anchor-id="from-notebook-to-production">From Notebook to Production</h2>
-<p>The final step was making sure that the model did not depend on the original training notebook.</p>
-<p>Once the model has been trained, I do not need to keep all 8,625 documents sitting beside it just to classify one new document.</p>
-<p>Instead, the important parts of the trained pipeline are saved into a single <code>joblib</code> artefact.</p>
-<p>This contains the information needed to process a new document in the same way as the training documents, including the vocabulary selection, feature configuration, model weights, thresholds and embedding-model information.</p>
+<p>The final step was making sure that the model did not depend on the original training notebook. Once the model has been trained, I do not need to keep all 8,625 documents sitting beside it just to classify one new document. Instead, the important parts of the trained pipeline are saved into a single <code>joblib</code> artefact. This contains the information needed to process a new document in the same way as the training documents, including the vocabulary selection, feature configuration, MLP model weights, etc.</p>
 <p>When a new document arrives, the production wrapper can therefore do roughly this:</p>
 <p><strong>New document</strong></p>
-<p>→ <strong>clean it</strong></p>
-<p>→ <strong>create the different representations</strong></p>
-<p>→ <strong>combine them</strong></p>
-<p>→ <strong>pass them through the trained model</strong></p>
-<p>→ <strong>return the predicted legal areas</strong></p>
+<ol type="1">
+<li><p><strong>clean it</strong></p></li>
+<li><p><strong>create the different representations</strong></p></li>
+<li><p><strong>combine them</strong></p></li>
+<li><p><strong>pass them through the trained model</strong></p></li>
+<li><p><strong>return the predicted legal areas</strong></p></li>
+</ol>
 <p>This was an important transition for me because it changed the project from:</p>
-<blockquote class="blockquote">
-<p>“I trained a model in a notebook.”</p>
-</blockquote>
-<p>into:</p>
-<blockquote class="blockquote">
-<p>“I have a small component that can actually be plugged into another system.”</p>
-</blockquote>
+<p><strong>“I trained a model in a notebook.”</strong> into <strong>“I have a small component that can actually be plugged into another system.”</strong></p>
 </section>
 <section id="what-i-learned-from-the-project" class="level2">
 <h2 class="anchored" data-anchor-id="what-i-learned-from-the-project">What I Learned From the Project</h2>
@@ -399,70 +530,16 @@ ul.task-list li input[type="checkbox"] {
 <p>They were about the data.</p>
 <section id="labels-are-not-always-ground-truth" class="level3">
 <h3 class="anchored" data-anchor-id="labels-are-not-always-ground-truth">Labels Are Not Always Ground Truth</h3>
-<p>Just because a document has been labelled by a human does not automatically mean the label is perfect.</p>
-<p>In this case, the existing labels were created for an editorial purpose, not specifically for training a machine-learning classifier.</p>
-<p>That means a label can be useful for a human reader while still being noisy from a machine-learning perspective.</p>
-<p>The model therefore learns from the labels we give it — including their mistakes.</p>
+<p>Just because a document has been labelled by a human does not automatically mean the label is perfect. In this case, the existing labels were created for an editorial purpose, not specifically for training a machine-learning classifier. That means a label can be useful for a human reader while still being noisy from a machine-learning perspective. The model therefore learns from the labels we give it, including their mistakes.</p>
 </section>
 <section id="more-information-is-not-always-better" class="level3">
 <h3 class="anchored" data-anchor-id="more-information-is-not-always-better">More Information Is Not Always Better</h3>
-<p>My first instinct was to give the model as much information as possible.</p>
-<p>But legal documents contain an enormous amount of information that has nothing to do with their broad legal area.</p>
-<p>More text can therefore mean more noise.</p>
-<p>Cleaning and selecting the right information became just as important as choosing the model.</p>
-</section>
-<section id="the-representation-has-to-match-the-question" class="level3">
-<h3 class="anchored" data-anchor-id="the-representation-has-to-match-the-question">The Representation Has to Match the Question</h3>
-<p>This is probably the biggest lesson from the entire project.</p>
-<p>If I ask:</p>
-<blockquote class="blockquote">
-<p>“What type of document is this?”</p>
-</blockquote>
-<p>then structure, formatting and procedural language can be extremely useful.</p>
-<p>If I ask:</p>
-<blockquote class="blockquote">
-<p>“What area of law is this document about?”</p>
-</blockquote>
-<p>those same features can become much less useful.</p>
-<p>A court ruling and a news article can look completely different while discussing the same legal area.</p>
-<p>So the model needs to be built around the question we actually want it to answer.</p>
-</section>
-<section id="a-complicated-model-is-not-automatically-a-better-model" class="level3">
-<h3 class="anchored" data-anchor-id="a-complicated-model-is-not-automatically-a-better-model">A Complicated Model Is Not Automatically a Better Model</h3>
-<p>It would have been easy to throw a much larger language model at the problem and call it solved.</p>
-<p>But the real challenge was not simply understanding Swedish.</p>
-<p>It was building something that could process a large number of documents repeatedly, cheaply, consistently and in a way that could be inspected when it made mistakes.</p>
-<p>For this particular problem, a relatively compact combination of traditional NLP features, Swedish sentence embeddings and a small neural network turned out to be a much more practical direction.</p>
+<p>My first instinct was to give the model as much information as possible. But legal documents contain an enormous amount of information that has nothing to do with their broad legal area. More text can therefore mean more noise. Cleaning and selecting the right information became just as important as choosing the model.</p>
 </section>
 </section>
 <section id="where-i-am-now" class="level2">
 <h2 class="anchored" data-anchor-id="where-i-am-now">Where I Am Now</h2>
-<p>The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas.</p>
-<p>More importantly, I now have a pipeline around the model rather than just the model itself:</p>
-<p><strong>Document</strong></p>
-<p>→ <strong>clean and normalise</strong></p>
-<p>→ <strong>extract several views of the text</strong></p>
-<p>→ <strong>combine lexical and semantic information</strong></p>
-<p>→ <strong>classify into the 18 main legal areas</strong></p>
-<p>→ <strong>review and correct</strong></p>
-<p>→ <strong>save the result for evaluation</strong></p>
-<p>The next step is not simply to make the neural network bigger.</p>
-<p>It is to improve the quality of the information going into it and the labels it learns from.</p>
-<p>That means looking more closely at difficult documents, understanding where the existing Lexnova labels are too broad, building a reliable manually reviewed validation set, and eventually extending the system towards the 157 sub-areas.</p>
-</section>
-<section id="final-thoughts" class="level2">
-<h2 class="anchored" data-anchor-id="final-thoughts">Final Thoughts</h2>
-<p>When I started this project, I thought the difficult part would be choosing the right machine-learning model.</p>
-<p>It turned out that the harder questions came before the model:</p>
-<p><strong>What exactly are we asking it to learn?</strong></p>
-<p><strong>Which parts of a legal document actually contain that information?</strong></p>
-<p><strong>Which labels can we trust?</strong></p>
-<p><strong>How do we distinguish a document’s format from its subject?</strong></p>
-<p>And perhaps most importantly:</p>
-<p><strong>How do we build something that is useful when it is wrong, rather than something that simply looks impressive when it is right?</strong></p>
-<p>That is what made this project interesting to me.</p>
-<p>The final classifier is only one part of it.</p>
-<p>The real work was figuring out what the model should be looking at in the first place.</p>
+<p>The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas. Additionally, The Streamlit app around the model improves the quality of the information going into it and the labels it learns from. That means looking more closely at difficult documents, understanding where the existing Lexnova labels are too broad, building a reliable manually reviewed validation set, and eventually extending the system towards the 157 sub-areas.</p>
 </section>
 
 </main>
