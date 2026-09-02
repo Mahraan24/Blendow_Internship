@@ -459,9 +459,7 @@ When a new document arrives, the production wrapper can therefore do roughly thi
 
 5. **return the predicted legal areas**
 
-This was an important transition for me because it changed the project from:
-
-**"I trained a model in a notebook."** into **"I have a small component that can actually be plugged into another system."**
+This transition changed the project from **"I trained a model in a notebook."** into **"I have a small component that can actually be plugged into another system."**
 
 ## What I Learned From the Project
 
@@ -469,12 +467,12 @@ The biggest lessons were not really about neural networks.
 
 They were about the data.
 
-### Labels Are Not Always Ground Truth
+**Labels Are Not Always Ground Truth**
 
 Just because a document has been labelled by a human does not automatically mean the label is perfect. In this case, the existing labels were created for an editorial purpose, not specifically for training a machine-learning classifier.
 That means a label can be useful for a human reader while still being noisy from a machine-learning perspective. The model therefore learns from the labels we give it, including their mistakes.
 
-### More Information Is Not Always Better
+**More Information Is Not Always Better**
 
 My first instinct was to give the model as much information as possible. But legal documents contain an enormous amount of information that has nothing to do with their broad legal area. More text can therefore mean more noise.
 Cleaning and selecting the right information became just as important as choosing the model.
