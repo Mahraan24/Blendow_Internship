@@ -44,7 +44,7 @@ So I built a lighter, faster classifier using the labelled Lexnova data that alr
 2. **The hierarchy is uneven.** There are 18 main legal areas and 157 sub-areas. Public Law alone has 26 sub-areas; most others have far fewer.
 3. **The existing tags were not perfect.** Many documents had been tagged broadly to multiple legal areas so that they would reach more subscribers and not because they truly belonged to those tags.
 4. **Legal documents are noisy.** Headers, footers, addresses, case numbers and repeated procedural language add little signal about the actual legal area.
-5. **157 sub-areas classification were too complex at the start.** I decided to master the 18 main areas first.
+5. **The 157 sub-areas were too complex to tackle at the start.** So, I decided to master the 18 main areas first.
 
 ## The Legal Area Hierarchy
 
@@ -164,7 +164,7 @@ The production system therefore focuses on the 18 main areas. The same architect
 
 ## Making It Usable
 
-A model that only lives inside a notebook is not very useful. Therefore, I built a cute and small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.
+A model that only lives inside a notebook is not very useful. Therefore, I built a small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.
 
 ![Streamlit interface](/images/img_ui.png)
 
@@ -184,7 +184,7 @@ This is not only a demo. It is also a way to challenge the model and collect bet
 
 Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas, all without needing the original 8,625 training documents.
 
-That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system like our Pipeline for Blendow-Noxtua.”
+That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system like our pipeline for Blendow-Noxtua.”
 
 ## What I Learned
 
@@ -194,7 +194,7 @@ The biggest lessons were about the data, not the neural network.
 The existing tags were created for editorial purposes, not for training a machine-learning model. A label that is useful for a human reader can still be noisy for a classifier. The model learns from the labels we give it, including their imperfections.
 
 **More information is not always better.**
-My first instinct was to give the model as much text as possible. Legal documents contain a great deal of material that has nothing to do with their broad legal area. Cleaning and selecting the right information became just as important as choosing the features itself.
+My first instinct was to give the model as much text as possible. Legal documents contain a great deal of material that has nothing to do with their broad legal area. Cleaning and selecting the right information became just as important as choosing the model itself.
 
 ## Where I Am Now
 
