@@ -115,14 +115,14 @@ ul.task-list li input[type="checkbox"] {
 
 <section id="context" class="level2">
 <h2 class="anchored" data-anchor-id="context">Context</h2>
-<p><strong>Blendow (Blendow Group)</strong> is Sweden’s leading legal information, media and education provider. Behind platforms like <strong>Dagens Juridik</strong> and <strong>BG Institute</strong>. <a href="https://www.blendow.se">Read more</a></p>
+<p><strong>Blendow (Blendow Group)</strong> is Sweden’s leading legal information, media and education provider. It is behind platforms like <strong>Dagens Juridik</strong> and <strong>BG Institute</strong>. <a href="https://www.blendow.se">Read more</a></p>
 <p><strong>Lexnova (Blendow Lexnova)</strong> is their legal intelligence database. For years it has delivered analysed court rulings, news and expert commentaries, all manually tagged by legal professionals. <a href="https://www.lexnova.se">Read more</a></p>
 <p><strong>Noxtua</strong> is a European Legal AI platform focused on research, analysis and document drafting under strict European data rules. <a href="https://www.noxtua.com">Read more</a></p>
 <p><strong>In short:</strong> <a href="https://www.blendow.se/blendow-noxtua">Blendow-Noxtua</a> combines Blendow’s Swedish legal data with Noxtua’s AI technology for Swedish lawyers and legal departments.</p>
 </section>
 <section id="the-problem" class="level2">
 <h2 class="anchored" data-anchor-id="the-problem">The Problem</h2>
-<p>For the Blendow–Noxtua launch we built a full AI pipeline to process Swedish legal documents. The pipeline masks sensitive information, extracts metadata, converts files to XML, and more.</p>
+<p>For the Blendow-Noxtua launch we built a full AI pipeline to process Swedish legal documents. The pipeline masks sensitive information, extracts metadata, converts files to XML, and more.</p>
 <p>The problem was new material. Documents already in Lexnova had legal areas assigned by lawyers. New documents arriving from outside sources had none.</p>
 <p>We needed a reliable way to tag legal areas so Noxtua could work with the data.</p>
 <p>The obvious idea was to use a large language model. But the scale made that impractical. We were dealing with thousands of documents, and eventually millions. Running an LLM on top of an already expensive pipeline would have been too slow and too costly.</p>
@@ -130,9 +130,9 @@ ul.task-list li input[type="checkbox"] {
 <ol type="1">
 <li><strong>Documents often belong to more than one area.</strong> On average a Lexnova document carries 2.6 main tags.</li>
 <li><strong>The hierarchy is uneven.</strong> There are 18 main legal areas and 157 sub-areas. Public Law alone has 26 sub-areas; most others have far fewer.</li>
-<li><strong>The existing tags were not perfect.</strong> Many documents had been tagged broadly so they would reach more subscribers, not because they truly belonged to every tag.</li>
+<li><strong>The existing tags were not perfect.</strong> Many documents had been tagged broadly to multiple legal areas so that they would reach more subscribers and not because they truly belonged to those tags.</li>
 <li><strong>Legal documents are noisy.</strong> Headers, footers, addresses, case numbers and repeated procedural language add little signal about the actual legal area.</li>
-<li><strong>157 sub-areas were too complex at the start.</strong> I decided to master the 18 main areas first.</li>
+<li><strong>The 157 sub-areas were too complex to tackle at the start.</strong> So, I decided to master the 18 main areas first.</li>
 </ol>
 </section>
 <section id="the-legal-area-hierarchy" class="level2">
@@ -196,7 +196,7 @@ ul.task-list li input[type="checkbox"] {
 <figcaption>Top terms per legal area (English)</figcaption>
 </figure>
 </div>
-<p><strong>2. Patterns inside Swedish words</strong> Swedish creates long compound words. Looking at short character sequences (groups of 3–5 characters) lets the model recognise related terms even when the exact full word has never been seen before.</p>
+<p><strong>2. Patterns inside Swedish words</strong> Swedish creates long compound words. Therefore, looking at short character sequences lets the model recognise related terms even when the exact full word has never been seen before.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="./images/img_char.png" class="img-fluid figure-img"></p>
@@ -220,7 +220,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="the-classifier-and-how-well-it-works" class="level2">
 <h2 class="anchored" data-anchor-id="the-classifier-and-how-well-it-works">The Classifier and How Well It Works</h2>
-<p>The classifier is a small neural network called a <strong>Multilayer Perceptron (MLP)</strong>. It works like a series of decision layers. It receives the combined features from the three views above and outputs 18 scores — one for each main legal area.</p>
+<p>The classifier is a small neural network called a <strong>Multilayer Perceptron (MLP)</strong>. It works like a series of decision layers. It receives the combined features from the three views above and outputs 18 scores, one for each main legal area.</p>
 <p>It does not force a document into a single category. It answers:</p>
 <blockquote class="blockquote">
 <p>How likely is this document to belong to each of these 18 areas?</p>
@@ -252,7 +252,7 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="making-it-usable" class="level2">
 <h2 class="anchored" data-anchor-id="making-it-usable">Making It Usable</h2>
-<p>A model that only lives inside a notebook is not very useful. I built a small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.</p>
+<p>A model that only lives inside a notebook is not very useful. Therefore, I built a small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.</p>
 <div class="quarto-figure quarto-figure-center">
 <figure class="figure">
 <p><img src="./images/img_ui.png" class="img-fluid figure-img"></p>
@@ -277,8 +277,8 @@ ul.task-list li input[type="checkbox"] {
 </section>
 <section id="from-notebook-to-production" class="level2">
 <h2 class="anchored" data-anchor-id="from-notebook-to-production">From Notebook to Production</h2>
-<p>Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas — without needing the original 8,625 training documents.</p>
-<p>That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system.”</p>
+<p>Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas, all without needing the original 8,625 training documents.</p>
+<p>That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system like our pipeline for Blendow-Noxtua.”</p>
 </section>
 <section id="what-i-learned" class="level2">
 <h2 class="anchored" data-anchor-id="what-i-learned">What I Learned</h2>
@@ -289,7 +289,7 @@ ul.task-list li input[type="checkbox"] {
 <section id="where-i-am-now" class="level2">
 <h2 class="anchored" data-anchor-id="where-i-am-now">Where I Am Now</h2>
 <p>The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas. The Streamlit app lets me inspect difficult cases, correct mistakes, and gradually improve the quality of the labels the model learns from.</p>
-<p>Next steps include building a more reliable manually reviewed validation set and, later, extending the system towards the 157 sub-areas.</p>
+<p>Next steps could include building a more reliable manually reviewed validation set and, later, extending the system towards the 157 sub-areas.</p>
 </section>
 
 </main>
