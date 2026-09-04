@@ -2,14 +2,13 @@
 title: "Teaching a Model to Recognise the Area of Law in Swedish Legal Documents"
 description: "How 8,625 Swedish legal documents, 18 main legal areas and 157 sub-areas taught me about labels, language, noise, and the difference between **What a document is about** versus **Which legal area a document belongs to**."
 author: "Mahraan Talukder"
-
 date: today
 date-format: "DD MMMM, YYYY"
 categories:
-  - machine-learning
-  - nlp
-  - legal-ai
-  - multilabel
+- machine-learning
+- nlp
+- legal-ai
+- multilabel
 format:
   html:
     toc: true
@@ -19,466 +18,186 @@ execute:
   freeze: true
 ---
 
-
-
-
 ## Context
 
-**Blendow (Blendow Group):** Sweden’s leading legal information, media, and education provider. They are the umbrella organisation behind major Swedish legal platforms like **Dagens Juridik** and **BG Institute**. [Read more](https://www.blendow.se)
+**Blendow (Blendow Group)** is Sweden’s leading legal information, media and education provider. Behind platforms like **Dagens Juridik** and **BG Institute**. [Read more](https://www.blendow.se)
 
-**Lexnova (Blendow Lexnova):** Blendow’s legal intelligence news agency and database. For years, it has delivered analysed court rulings, legal news, and expert commentaries, with a large library of Swedish legal documents manually categorised and tagged by legal professionals. [Read more](https://www.lexnova.se)
+**Lexnova (Blendow Lexnova)** is their legal intelligence database. For years it has delivered analysed court rulings, news and expert commentaries, all manually tagged by legal professionals. [Read more](https://www.lexnova.se)
 
-**Noxtua:** A specialised European Legal AI platform, originally developed by tech startup Xayn together with leading law firms. It is designed for legal research, analysis, and document drafting and brings AI capabilities to legal workflows under European data protection standards. [Read more](https://www.noxtua.com)
+**Noxtua** is a European Legal AI platform focused on research, analysis and document drafting under strict European data rules. [Read more](https://www.noxtua.com)
 
-**In short:** **[Blendow-Noxtua](https://www.blendow.se/blendow-noxtua)** is the joint launch combining Blendow’s Swedish legal data with Noxtua’s legal AI technology to serve Swedish lawyers and legal departments.
+**In short:** [Blendow-Noxtua](https://www.blendow.se/blendow-noxtua) combines Blendow’s Swedish legal data with Noxtua’s AI technology for Swedish lawyers and legal departments.
 
 ## The Problem
 
-For the big **Blendow–Noxtua** launch, we implemented a full AI document-processing pipeline to safely and reliably process Swedish legal content collected from various sources. The pipeline includes several steps, such as masking sensitive information, extracting metadata, converting documents to XML, and so on.
+For the Blendow–Noxtua launch we built a full AI pipeline to process Swedish legal documents. The pipeline masks sensitive information, extracts metadata, converts files to XML, and more.
 
-However, much of the content we collect has never been seen by the pipeline before. While documents already available in the **Blendow Lexnova** database had legal areas assigned by authors and lawyers over the years, new material collected from outside sources arrives completely unknown and untagged.
+The problem was new material. Documents already in Lexnova had legal areas assigned by lawyers. New documents arriving from outside sources had none.
 
-We needed a consistent legal-area tagging step so **Noxtua** could understand and process our data correctly.
+We needed a reliable way to tag legal areas so Noxtua could work with the data.
 
-> *In the AI era, the natural first instinct is: "Why not just use a Large Language Model (LLM) to sort and classify?"*
+The obvious idea was to use a large language model. But the scale made that impractical. We were dealing with thousands of documents, and eventually millions. Running an LLM on top of an already expensive pipeline would have been too slow and too costly.
 
+So I built a lighter, faster classifier using the labelled Lexnova data that already existed. There were several challenges:
 
-***The problem is scale.***
+1. **Documents often belong to more than one area.** On average a Lexnova document carries 2.6 main tags.
+2. **The hierarchy is uneven.** There are 18 main legal areas and 157 sub-areas. Public Law alone has 26 sub-areas; most others have far fewer.
+3. **The existing tags were not perfect.** Many documents had been tagged broadly so they would reach more subscribers, not because they truly belonged to every tag.
+4. **Legal documents are noisy.** Headers, footers, addresses, case numbers and repeated procedural language add little signal about the actual legal area.
+5. **157 sub-areas were too complex at the start.** I decided to master the 18 main areas first.
 
-We are dealing with thousands, if not eventually millions, of incoming documents. Moreover, running the entire pipeline is expensive on its own; adding an LLM just for classification would skyrocket both cost and processing time.
+## The Legal Area Hierarchy
 
-We therefore needed an approach that was faster, cheaper, and predictable enough to run as part of a larger processing pipeline.
+The labels form a two-level tree: 18 broad main areas and 157 more specific sub-areas underneath them.
 
-That is where my research and implementation of a legal-area tagging classifier using NLP and sentence embeddings came into play. I used the labelled content already available in **Blendow Lexnova** to train the model, though there were quite a few challenges along the way.
+A single document can touch several branches at once. So the model had to be able to assign more than one main area to the same document.
 
-1. **Multilabel Nature:** Legal documents usually contain references, citations etc. for which a document can touch multiple legal areas to describe a case. Documents in Lexnova carry an average of **2.6 main tags**.
-
-2. **Imbalanced Hierarchy:** The data features 157 subtags spread across 18 main legal areas. `Offentlig rätt` (Public Law) is the clear heavyweight with 26 subtags, while the other main areas on average has 7.7 subtags. This created a strong risk of Public Law dominating the rest.
-
-3. **Mistreatment of Lexnova tags:** A good number of documents on Lexnova were historically broadcasted across too many legal areas, as the main purpose has been to make a document reach as many of their subscribers as possible and not whether the document really belong to those tags. This increased false positives and reduced precision.
-
-4. **Document Noise:** Legal texts contain massive amounts of boilerplate noise such as headers, footers, procedural phrases, addresses, and contact details that do not really contribute to providing the legal area it belongs to.
-
-5. **Complexity of Subtags:** Mapping and maintaining all 157 subtags quickly proved complicated. For this reason, our primary focus shifted to mastering the classification on the 18 main tags first, while using a lighter approach for the subtags later on.
-
-## The Legal Area Tag Hierarchy
-
-The labels were organised like a two-level family tree, with **18 broad legal areas** at the top and **157 more specific sub-areas** underneath them.
-A simplified part of the hierarchy looks like this:
-
-| Main legal area | A few example sub-areas | Total Sub-areas |
-|-------|------|------|
-| **Offentlig rätt** (Public Law)              | **Djurhållning** (Animal Keeping/Welfare), <br> **Kommunalrätt** (Municipal Law/Local Government Law)                     | 26 |
-| **Affärsjuridik** (Commercial/Business Law)| **Associationsrätt-aktiebolagsrätt** (Corporate Law-Limited Companies), <br> **Sakrätt** (property law or rights in rem)    | 13 |
-| **Miljörätt** (Environmental Law)            | **Buller** (Noise Pollution), <br> **Djur-och växtskydd** (Flora and Fauna Protection)                                        | 13 |
-
-The complete hierarchy was much larger and uneven. Some branches contained far more sub-areas and documents than others. A single document could have several sub-area tags from different branches.
-This meant that the task could not simply be treated as choosing **one** legal area. The model needed to be able to assign **several main legal areas to the same document**.
-
-For the experiment, I used the existing hierarchy to map each document's **sub-area tags** to their broader **parent areas**.
-If several sub-areas belonged to the same parent, that parent was kept only once. If they belonged to different parents, all of those parents were kept.
-
-For example, one document might have these **sub-area tags**:
-
-> **["Avtalsrätt", "Fri rörlighet", "Europakonventionen"]**
-
-Using the existing hierarchy:
-
-- `Avtalsrätt` (Contract Law) **subtag** belongs to `Affärsjuridik` (Commercial / Business Law) **main tag**.
-- `Fri rörlighet` (Free Movement) **subtag** belongs to `Europeisk rätt` **main tag**.
-- `Europakonventionen` (European Convention on Human Rights) **subtag** also belongs to `Europeisk rätt` (European Union Law) **main tag**.
-
-The last two sub-areas therefore point to the **same parent**. The document therefore receives two main legal areas:
-
-> **["Affärsjuridik", "Europeisk rätt"]**
-
-This step turned the original collection of 157 specific sub-areas into the **18 main legal-area labels** that the model was trained to predict.
-
-### Creating the Label Matrix
-
-The next step was to turn these labels into numbers using `MultiLabelBinarizer`. The result is a **document-by-legal-area matrix**:
-
-- **1** means the legal area applies to the document.
-- **0** means it does not.
-
-For example:
-
-| Document | Affärsjuridik | Europeisk rätt | Miljörätt | Skatterätt |
-|---|---:|---:|---:|---:|
-| Document A | 1 | 1 | 0 | 0 |
-| Document B | 0 | 0 | 1 | 0 |
-| Document C | 1 | 0 | 0 | 1 |
-
-Document A therefore belongs to both `Affärsjuridik` and `Europeisk rätt`.
-
-This matrix is essentially the model's **answer sheet**. It does not contain the document text; it contains the legal areas that the model is expected to learn to predict.
-
-### Keeping the Labels Aligned
-
-The documents were divided into three separate groups:
-
-> **Training set:** Documents the model is allowed to learn from. <br>
-> **Validation set:** Documents used to evaluate the model while developing and tuning it. <br>
-> **Test set:** Documents kept aside for the final evaluation.
-
-The same separation must also be applied to the labels.
-
-> If a document goes into X_train, its labels must go into Y_train. <br>
-> If a document goes into X_validation, its labels must go into Y_validation. <br>
-> And if a document goes into X_test, its labels must go into Y_test.
-
-In simple terms:
-
-> **X = what the model sees** <br>
-> **Y = what the model should predict**
-
-This ensures document features and their labels must remain aligned throughout the experiment.
-
-### Teaching the Model
-
-During training, the model receives a document from `X_train`. It produces **18 scores**, one for each main legal area. For example:
+I mapped every sub-area tag up to its parent main area. If several sub-tags pointed to the same parent, that parent was kept only once. If they pointed to different parents, all of those parents were kept.
 
 Example:
 
-> **Affärsjuridik = 0.91**,
-> **Skatterätt = 0.08**,
-> **Processrätt = 0.72**,
-> **Miljörätt = 0.14**,
-> **...**
+A document tagged with
+`["Avtalsrätt", "Fri rörlighet", "Europakonventionen"]`
 
-These scores represent how strongly the model believes that each legal area applies to the document. The model can then compare its output with the actual labels in `Y_train`.
+becomes
 
-Suppose the correct answer is:
+`["Affärsjuridik", "Europeisk rätt"]`
 
-> **Affärsjuridik = 1**
-> **Skatterätt = 0**
-> **Processrätt = 1**
-> **Miljörätt = 0**
+This turned the original 157 sub-areas into the 18 main labels the model would learn to predict.
 
-A high score for `Affärsjuridik` is therefore useful, while a high score for `Skatterätt` would be a mistake.
-Likewise, giving `Processrätt` a very low score would be a mistake because that area is actually present.
+## "What a document is about" vs "Which legal area it belongs to"
 
-These differences contribute to a value called the **training loss**. The loss can be thought of as a way of telling the model:
+Early on I tried topic modelling with BERTopic. The idea was simple: let the documents organise themselves into natural groups and hope those groups matched the legal areas we already used.
 
-> **"How far were your predictions from the correct answers?"**
+BERTopic did find coherent topics. It discovered clusters about things like:
 
-The model then adjusts its internal parameters to reduce this loss. By repeating this process over many training documents, it gradually learns patterns that connect the document features to the legal areas.
+- whether parties are bound by a valuation under AB 04
+- which foreign taxes can be credited against Swedish tax
+- GDPR assessments when processing children’s data
+- anti-money-laundering rules for auditors
+- hearing techniques when children give evidence
+- price adjustments when a company is sold
+- practical employment-law issues from hiring to dismissal
 
-In simple terms, the model is learning:
+These topics were clear and useful. The problem was that “what the document is about” is not the same as “which area of law it belongs to.”
 
-> **"When I see these kinds of words, character patterns, and semantic representations, these legal areas are more likely to apply."**
+A detailed discussion of hearing techniques for children sits under the broad label Procedural Law. A cluster about money-laundering rules for auditors belongs somewhere inside Commercial Law. A narrow tax-credit question is still Tax Law, even if the topic itself is more specific.
 
-## "What a document is about" Vs "Which legal area it belongs to."
+BERTopic was excellent at finding concrete subject matter. It was much less useful at recovering the abstract legal-area labels the pipeline needed. That became one of the most important lessons of the project.
 
-Before getting into the model itself, there is an important distinction that took me quite a while to understand.
+I therefore moved to a supervised multilabel classifier trained directly on the 18 main legal areas.
 
-In the early phase of the project I turned to topic modelling, specifically **BERTopic**, because it seemed like the most promising way to discover structure in the collection.
-If I could give the model thousands of Swedish legal documents and let it find natural groupings based on content, perhaps those groups would line up with the legal areas we already used in Lexnova.
-That would have been an elegant solution as most of the classifying heavy-work would have been easily done by just letting the data organise itself.
+## Cleaning the Text
 
-What actually happened was more revealing than I expected.
+Before the model could learn anything useful, the documents had to be cleaned. Legal texts contain a lot of material that describes the document itself rather than its legal subject: XML tags, page numbers, addresses, phone numbers, case references, repeated sentences and personal names.
 
-**BERTopic** did find coherent clusters. The topics were often tight, readable, and clearly about something specific. Looking at one of the runs, the model produced groups such as:
+The cleaning steps were roughly:
 
-- Court language about whether parties are bound by a valuation under **AB 04** (a standard set of general conditions used for execution contracts in the Swedish construction industry)
+- remove XML tags
+- strip URLs, emails, phone numbers, addresses and other boilerplate
+- replace dates and legal references with simple placeholders
+- collapse extra whitespace
+- optionally remove near-duplicate sentences
+- replace person names with a placeholder and apply **lemmatization**
 
-- Questions about which foreign taxes can be credited against Swedish tax
+**Lemmatization** means turning every word into its base form. For example, the Swedish words *ska*, *skall* and *skulle* all become *skola*. This is especially useful for Swedish, where words change form a lot and compound words can be very long.
 
-- Consequence assessments under the GDPR when processing children’s personal data
+The goal was not to remove as much text as possible. It was to remove information that was irrelevant to the legal area.
 
-- Anti-money-laundering obligations that apply specifically to auditors and accounting firms
+## Three Ways of Looking at a Document
 
-- Hearing techniques and procedural strategies when children give evidence in court
+I gave the model three different views of the same text.
 
-- Rules that apply when a company is sold and the purchase price has to be adjusted
+**1. Important words (TF-IDF)**
+**TF-IDF** is a classic way of measuring how important a word is in a document compared with how common it is across all documents.
+Generic legal words like “lag”, “dom” or “mål” appear everywhere and help little. More specialised terms such as “arbetare” or “patent” carry stronger signals about the legal area. I ran TF-IDF on the lemmatised Swedish text so different forms of the same word were treated as one.
 
-- Practical employment-law issues for managers, covering the whole journey from hiring to dismissal
+Here are the top terms the model found most useful for each legal area:
 
-Each of these topics is genuinely about a concrete subject. You can read the top words and the representative documents and immediately understand what the texts discuss.
-The problem is that “what the document is about” is not the same as “which area of law the document belongs to.” This became one of the most important lessons of the project.
+![Top terms per legal area (Swedish)](/images/img_wrd.png)
 
-A topic such as “hearing techniques when children give evidence” is a very specific procedural issue.
-In the Lexnova taxonomy it would sit under the much broader label `Processrätt` (Procedural Law).
-A cluster about money-laundering rules for auditors belongs somewhere inside `Affärsjuridik` (Commercial/Business Law) or a related regulatory area.
-A detailed discussion of foreign-tax credits is clearly tax law, yet the topic itself is narrower than the main area `Skatterätt` (Tax Law).
+![Top terms per legal area (English)](/images/img_wrd_en.png)
 
-In other words, **BERTopic** was excellent at discovering the concrete subject matter of the documents.
-It was far less useful at recovering the more abstract legal-area labels we actually needed for the pipeline.
+**2. Patterns inside Swedish words**
+Swedish creates long compound words. Looking at short character sequences (groups of 3–5 characters) lets the model recognise related terms even when the exact full word has never been seen before.
 
-That is why I ultimately moved away from pure topic modelling as the final solution and towards a supervised multilabel classifier that was explicitly trained on the 18 main legal areas.
+![Top compound / character patterns (Swedish)](/images/img_char.png)
 
-## Document Text Clean-Up
+![Top compound / character patterns (English)](/images/img_char_en.png)
 
-Before trying to make a model understand the documents, I first had to make the documents understandable. This turned out to be a much bigger part of the project than I originally expected.
-Legal documents are not just paragraphs of useful legal information. They can contain XML and HTML markup, page numbers, addresses, telephone numbers, dates, case references, repeated sentences, OCR mistakes, names, and other pieces of information that may be useful to a human reader but can be distracting when trying to learn the broader legal area.
+**3. Overall meaning (sentence embeddings)**
+I used a Swedish sentence-embedding model from **KBLab** (`KBLab/sentence-bert-swedish-cased`).
+An embedding turns a piece of text into a list of numbers that capture its meaning. Documents that discuss similar ideas end up close to each other in this number space, even if they use different vocabulary.
+I limited each document to its first 384 tokens (roughly the title and introduction), because those parts usually contain the strongest clues about the legal area.
 
-So instead of simply giving the raw document to the model, I built a cleaning step.
+None of these views is perfect on its own. Together they give a much richer picture of the document. The three representations are combined and passed to the classifier.
 
-The cleaning process roughly works like this:
+![How the three views are combined](/images/img_dim_fusion.png)
 
-1. Remove XML tags: As the pipeline will be sending XML text to the classifier, it is important to remove the XML tags and get one combined document text
+## The Classifier and How Well It Works
 
-2. Strip noise: RegEx solutions were used to replace all the URLs, emails, phone numbers, page markers, personal numbers, organisation numbers, addresses and other boilerplate with an empty string ("")
+The classifier is a small neural network called a **Multilayer Perceptron (MLP)**.
+It works like a series of decision layers. It receives the combined features from the three views above and outputs 18 scores — one for each main legal area.
 
-3. Normalise dates and legal references (SFS, case numbers, etc.) into simple placeholders: RegEx solutions were used to simply replace legal references like Swedish Code of Statutes (SFS) and case numbers etc with placeholder words like "SFS", "CASENUMBER" etc.
+It does not force a document into a single category. It answers:
 
-4. Collapse extra whitespace and dividers: to remove whitespaces and get a chunk of text for easier work or sentence persing.
+> How likely is this document to belong to each of these 18 areas?
 
-5. Optionally remove exact or near-duplicate sentences: legal documents could often have duplicate repeated sentences,
+A decision threshold then turns the scores into final labels. Looking at results per legal area was more informative than a single overall accuracy number.
 
-6. Run spaCy: tokenise, optionally drop person names, keep surface forms and lemmas: spaCy was used to replace actual people's names with a placeholder word PERSON using the ner solution. Further more the entire text is lemmatised, meaning that all the words in the documents turns to there root form of that word.
+![Performance by legal area](/images/img_scores.png)
 
-7. Produce two outputs: **clean_text** (original words) and **lemma_text** (lemmatised version).
+The confusion matrix below shows, for each true legal area, how often the model also predicted other areas. The diagonal (darker green) is the recall for that area.
 
-Lemmatization is particularly useful for Swedish because words can change their form and Swedish compound words can become very long.
+![Multi-label confusion matrix](/images/img_cm.png)
 
-The point is not to remove as much text as possible but to remove information that describes **the document itself** rather than **the legal subject of the document**. That distinction became surprisingly important.
+## Focusing on the 18 Main Areas
 
-## Three different ways to read a Document
+Behind the 18 main areas sit 157 sub-areas. At first I wanted to solve the whole hierarchy at once. That quickly became messy. There are many possible relationships between main areas and sub-areas, and documents can legitimately touch several parts of the tree.
 
-A document can tell us something through the individual words it uses, through the smaller pieces inside those words, and through the meaning of whole sentences.
-So I gave the model three different views of the same document.
+I deliberately narrowed the problem:
 
-### 1. Looking at the Important Words
+1. First, can I reliably recognise the broad legal area?
+2. Later, can I make the classification more specific?
 
-The first view is the most traditional one.
+The production system therefore focuses on the 18 main areas. The same architecture can later be extended to the finer labels.
 
-The model looks at which words appear in a document and how important they are compared with the rest of the collection.
-This is **TF-IDF**.
+## Making It Usable
 
-A simple way of thinking about it is:
+A model that only lives inside a notebook is not very useful. I built a small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.
 
-> If a word appears everywhere, it probably tells us very little.
-> If a word appears frequently in documents about one particular legal area, it may be much more useful.
+![Streamlit interface](/images/img_ui.png)
 
-For example, generic legal words like **Lag** (Law), **Dom** (Judgment) or **Mål** (Case) appear in almost every document and therefore is not very helpful for deciding the area of law.
+The interface lets me:
 
-On the other hand, a more specialised term like **Arbetare** (Worker/Employee) repeatedly appears in employment-law and the word **Patent** in intellectual-property-law documents. Since these words are specific to a particular legal area, they can be much more useful.
+- paste a document
+- run the classifier
+- see the predicted areas and their scores
+- correct the prediction manually
+- save the corrected result
 
-I used TF-IDF on the lemmatised Swedish text, lemmatisation gets all the words to their root form, so words like **ska**, **skall** and **skulle** all turns to their root form **skola** (shall / will), has shown in the table below:
+This is not only a demo. It is also a way to challenge the model and collect better examples. The saved corrections help measure real performance and improve the system over time.
 
-| Swedish word | Lemma | English example |
-|---|---|---|
-| **ska** | **skola** | For **ska**: *I **will** go to court.* |
-| **skall** | **skola** | For **skall**: *The parties **shall** comply with the agreement.* |
-| **skulle** | **skola** | For **skulle**: *I **would** go to court.* |
-
-it is difficult to provide a direct English translation of **ska**, **skall** and **skulle** as that depends on the context they are being used. I have attached a close enough sentence in English for each of them which should provide a basic idea of how all these three words has a common root word **skola**.
-
-From the TF-IDF terms I received from the lemmatised text, I selected the features that showed the strongest relationship with the 18 legal-area labels. Example of the top 5 terms in each of the 18 legal areas are given below:
-
-Original (In Swedish)
-![top 5 words per legal area](/images/img_wrd.png)
-Translated (In English)
-![top 5 words per legal area in En](/images/img_wrd_en.png)
-
-### 2. Looking Inside Swedish Words
-
-The second view was at the character level.
-
-This may sound strange at first. Instead of only asking *"what words are here?"*, the model also looks for *"what small patterns inside the words are present?"*
-
-This is especially useful for Swedish as a language, as Swedish can create long compound words, where several concepts are joined together into one word. Two words can therefore be related even when the exact full word has not appeared before.
-
-By looking at groups of 3–5 characters, the model can pick up these smaller patterns. Example of the top 5 such words are given below.
-
-Original (In Swedish)
-![top 5 chars per legal area](/images/img_char.png)
-Translated (In English)
-![top 5 chars per legal area in En](/images/img_char_en.png)
-
-This gave the model another way of recognising legal terminology that a normal word-based approach could miss.
-
-### 3. Looking at the Meaning of the Text
-
-The third view is quite different.
-
-Instead of simply counting words, I used a Swedish sentence-embedding model called [`KBLab/sentence-bert-swedish-cased`](https://huggingface.co/KBLab/sentence-bert-swedish-cased).
-This model has a maximum input length of **384 tokens**. Therefore, before creating an embedding, I limited each document to its **first 384 tokens**. This first 384 tokens always includes the **title** and **introduction** of a document, which are often the most valuable components for predicting the legal area of a document.
-Any text after those 384 tokens was not used for the embedding.
-
-This was important as passing the full documents into the embedding model would take considerably longer processing time, even though the model could only process up to its maximum input length.
-Explicitly limiting the input made the behaviour predictable by avoiding time preparing text that would not contribute to the final embedding.
-
-The embedding model then converts those 384 tokens into a **768-dimensional numerical representation**, often called an *embedding*.
-The idea behind an embedding is easier to understand if we imagine turning each document into a point on a map.
-Documents with similar meanings should end up relatively close together, while documents with very different meanings should end up further apart.
-
-So instead of only learning that two documents contain similar words, the classifier receives another signal about whether the documents are **semantically similar**.
-
-This is useful because two legal documents can discuss similar ideas without using exactly the same vocabulary.
-
-## Combining the dimensions together
-
-At this point I had three different ways of looking at the same document:
-
-**Words** which answers "What important terms does it use?"
-
-**Character patterns** answers "What Swedish word structures and fragments does it contain?"
-
-**Meaning** answers "What is the document broadly talking about?"
-
-None of these views is perfect on its own.
-
-But together they provide a much richer description of the document.
-
-The final model therefore combines the three representations into one feature vector for each document.
-
-![Combined Dimensions](/images/img_dim_fusion.png)
-
-The resulting feature vector is then passed to the **classifier**.
-
-## The Classifier
-
-The final classifier is a small neural network called a **Multilayer Perceptron (MLP)**.
-The important thing is not really the name but the concept. It works like a series of decision-making layers.
-
-The first layer receives all the information we extracted from the document in the 2000+ feature vectors, shown above.
-The following layers gradually combine these signals.
-At the end, the model produces 18 separate answers, one for each main legal area.
-This is important because a document does not necessarily belong to only one area.
-
-So the model does not simply answer:
-
-> "This document belongs to 'X' legal area."
-
-Instead, it answers:
-
-> "How likely is this document to belong to each of these 18 legal areas?"
-
-The system can then select more than one area when appropriate.
-
-## Model Scores and Evaluation
-
-![Model Scores](/images/img_scores.png)
-
-The figure above shows the model's output scores for the different legal areas. Each document receives one score for each of the 18 labels.
-These scores represent how strongly the trained classifier associates the document with each legal area.
-The important point is that these scores are **not simply one final class**. Several areas can receive high scores for the same document.
-
-For example, a document might receive something conceptually like:
-
-> **Affärsjuridik: 0.91**
-> **Försäkringsrätt: 0.78**
-> **Skatterätt: 0.12**
-> **Processrätt: 0.08**
-
-The system can therefore select both `Affärsjuridik` and `Försäkringsrätt` rather than forcing the document into a single category.
-
-To turn these scores into labels, a decision threshold is applied.
-Scores above the chosen threshold are treated as positive predictions, while scores below it are treated as negative predictions.
-
-A model that uses a very low threshold will tend to assign more legal areas.
-That can increase **recall**, because fewer relevant labels are missed, but it can also reduce **precision**, because more incorrect labels are added.
-
-A higher threshold does the opposite: it produces fewer predictions, potentially improving precision but missing some genuinely relevant areas.
-This is especially important in this dataset because the historical Lexnova labels are themselves not perfectly clean.
-
-### Confusion Matrix
-
-![Model Confusion Matrix](/images/img_cm.png)
-
-The confusion matrix gives another way to inspect the model's behaviour.
-
-For a multilabel problem, the matrix can be interpreted label by label: for each legal area, we can examine how often the model correctly identified that area, missed it, or incorrectly assigned it.
-
-The main quantities are:
-
-- **True Positive (TP):** The document belongs to the legal area and the model predicted it. <br>
-- **False Positive (FP):** The model predicted the legal area, but the document was not labelled with it. <br>
-- **False Negative (FN):** The document was labelled with the legal area, but the model failed to predict it. <br>
-- **True Negative (TN):** The document does not belong to the legal area and the model correctly left it unassigned.
-
-From these values we can calculate standard classification metrics:
-
-**Precision** asks ***When the model predicts a legal area, how often is it correct?*** <br>
-**Recall** asks ***Of the documents that should have received a legal area, how many did the model find?*** <br>
-**F1 score** combines precision and recall into a single measure, balancing the two.
-
-For this project, looking at these metrics per legal area is more informative than relying on one overall accuracy number.
-A model could achieve a seemingly strong overall result while performing poorly on smaller or less frequent legal areas.
-
-## The 157 Sub-Areas Problem
-
-The 18 main areas were only the beginning. Behind them were **157 more specific sub-areas**. At first, I wanted to solve the whole hierarchy at once. But this quickly became messy.
-There are many possible relationships between a main area and its sub-areas, and some documents can legitimately touch several parts of the hierarchy.
-Trying to solve all of this before properly understanding the 18 main areas would have made it much harder to understand where mistakes were coming from.
-
-So I deliberately narrowed the first version of the problem.
-
-1. **First: Can I reliably recognise the broad legal area?**
-
-2. **Then: Can I make the classification more specific?**
-
-This also makes the system easier to maintain.
-The current production classifier is therefore focused on the 18 main areas, while the same general architecture can later be extended towards the finer-grained labels.
-
-## Making It Something I Could Actually Use
-
-A model that only exists inside a notebook is not particularly useful.
-
-I wanted to be able to paste a real Swedish legal document into the system and see what it thinks.
-
-So I built a small **Streamlit interface** around the classifier.
-
-![ui](/images/img_ui.png)
-
-The interface allows me to:
-
-1. paste a document;
-2. run the classifier;
-3. see the predicted legal areas;
-4. see the model's scores for the different areas;
-5. correct the prediction by manual input;
-6. save the corrected result in a CSV file.
-
-This last part is particularly important. The interface is not only a demonstration. It also gives me a way to **challenge the model**. If I see that the model repeatedly assigns the wrong legal area to a certain type of document, that gives me something concrete to investigate.
-The saved results can then be used to compare the predicted labels against the corrected labels (that I manually enter) and calculate things such as precision, recall and F1 score. The application also checks whether a document title was already present in the training data from the JSON file of all the documents' titles saved as hashes.
-Before pasting a document I first paste the title to check whether it matches with any of the hashed train document title. This is useful because a prediction on something the model has effectively seen before can give a misleadingly optimistic impression of how well the model performs.
-
-Moreover, there is a Dashboard that shows the statistics of all the saved manual examples,
-
-![dashboard](/images/img_dashboard.png)
+![Evaluation dashboard](/images/img_dashboard.png)
 
 ## From Notebook to Production
 
-The final step was making sure that the model did not depend on the original training notebook. Once the model has been trained, I do not need to keep all 8,625 documents sitting beside it just to classify one new document. Instead, the important parts of the trained pipeline are saved into a single `joblib` artefact.
-This contains the information needed to process a new document in the same way as the training documents, including the vocabulary selection, feature configuration, MLP model weights, etc.
+Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas — without needing the original 8,625 training documents.
 
-When a new document arrives, the production wrapper can therefore do roughly this:
+That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system.”
 
-**New document**
+## What I Learned
 
-1. **clean it**
+The biggest lessons were about the data, not the neural network.
 
-2. **create the different representations**
+**Labels are not always ground truth.**
+The existing tags were created for editorial purposes, not for training a machine-learning model. A label that is useful for a human reader can still be noisy for a classifier. The model learns from the labels we give it, including their imperfections.
 
-3. **combine them**
-
-4. **pass them through the trained model**
-
-5. **return the predicted legal areas**
-
-This transition changed the project from **"I trained a model in a notebook."** into **"I have a small component that can actually be plugged into another system."**
-
-## What I Learned From the Project
-
-The biggest lessons were not really about neural networks.
-
-They were about the data.
-
-**Labels Are Not Always Ground Truth**
-
-Just because a document has been labelled by a human does not automatically mean the label is perfect. In this case, the existing labels were created for an editorial purpose, not specifically for training a machine-learning classifier.
-That means a label can be useful for a human reader while still being noisy from a machine-learning perspective. The model therefore learns from the labels we give it, including their mistakes.
-
-**More Information Is Not Always Better**
-
-My first instinct was to give the model as much information as possible. But legal documents contain an enormous amount of information that has nothing to do with their broad legal area. More text can therefore mean more noise.
-Cleaning and selecting the right information became just as important as choosing the model.
+**More information is not always better.**
+My first instinct was to give the model as much text as possible. Legal documents contain a great deal of material that has nothing to do with their broad legal area. Cleaning and selecting the right information became just as important as choosing the model itself.
 
 ## Where I Am Now
 
-The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas.
-Additionally, The Streamlit app around the model improves the quality of the information going into it and the labels it learns from.
-That means looking more closely at difficult documents, understanding where the existing Lexnova labels are too broad, building a reliable manually reviewed validation set, and eventually extending the system towards the 157 sub-areas.
+The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas. The Streamlit app lets me inspect difficult cases, correct mistakes, and gradually improve the quality of the labels the model learns from.
+
+Next steps include building a more reliable manually reviewed validation set and, later, extending the system towards the 157 sub-areas.
