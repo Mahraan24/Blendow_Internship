@@ -20,7 +20,7 @@ execute:
 
 ## Context
 
-**Blendow (Blendow Group)** is Sweden’s leading legal information, media and education provider. Behind platforms like **Dagens Juridik** and **BG Institute**. [Read more](https://www.blendow.se)
+**Blendow (Blendow Group)** is Sweden’s leading legal information, media and education provider. It is behind platforms like **Dagens Juridik** and **BG Institute**. [Read more](https://www.blendow.se)
 
 **Lexnova (Blendow Lexnova)** is their legal intelligence database. For years it has delivered analysed court rulings, news and expert commentaries, all manually tagged by legal professionals. [Read more](https://www.lexnova.se)
 
@@ -30,7 +30,7 @@ execute:
 
 ## The Problem
 
-For the Blendow–Noxtua launch we built a full AI pipeline to process Swedish legal documents. The pipeline masks sensitive information, extracts metadata, converts files to XML, and more.
+For the Blendow-Noxtua launch we built a full AI pipeline to process Swedish legal documents. The pipeline masks sensitive information, extracts metadata, converts files to XML, and more.
 
 The problem was new material. Documents already in Lexnova had legal areas assigned by lawyers. New documents arriving from outside sources had none.
 
@@ -42,9 +42,9 @@ So I built a lighter, faster classifier using the labelled Lexnova data that alr
 
 1. **Documents often belong to more than one area.** On average a Lexnova document carries 2.6 main tags.
 2. **The hierarchy is uneven.** There are 18 main legal areas and 157 sub-areas. Public Law alone has 26 sub-areas; most others have far fewer.
-3. **The existing tags were not perfect.** Many documents had been tagged broadly so they would reach more subscribers, not because they truly belonged to every tag.
+3. **The existing tags were not perfect.** Many documents had been tagged broadly to multiple legal areas so that they would reach more subscribers and not because they truly belonged to those tags.
 4. **Legal documents are noisy.** Headers, footers, addresses, case numbers and repeated procedural language add little signal about the actual legal area.
-5. **157 sub-areas were too complex at the start.** I decided to master the 18 main areas first.
+5. **157 sub-areas classification were too complex at the start.** I decided to master the 18 main areas first.
 
 ## The Legal Area Hierarchy
 
@@ -119,7 +119,7 @@ Here are the top terms the model found most useful for each legal area:
 ![Top terms per legal area (English)](/images/img_wrd_en.png)
 
 **2. Patterns inside Swedish words**
-Swedish creates long compound words. Looking at short character sequences (groups of 3–5 characters) lets the model recognise related terms even when the exact full word has never been seen before.
+Swedish creates long compound words. Therefore, looking at short character sequences lets the model recognise related terms even when the exact full word has never been seen before.
 
 ![Top compound / character patterns (Swedish)](/images/img_char.png)
 
@@ -137,7 +137,7 @@ None of these views is perfect on its own. Together they give a much richer pict
 ## The Classifier and How Well It Works
 
 The classifier is a small neural network called a **Multilayer Perceptron (MLP)**.
-It works like a series of decision layers. It receives the combined features from the three views above and outputs 18 scores — one for each main legal area.
+It works like a series of decision layers. It receives the combined features from the three views above and outputs 18 scores, one for each main legal area.
 
 It does not force a document into a single category. It answers:
 
@@ -164,7 +164,7 @@ The production system therefore focuses on the 18 main areas. The same architect
 
 ## Making It Usable
 
-A model that only lives inside a notebook is not very useful. I built a small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.
+A model that only lives inside a notebook is not very useful. Therefore, I built a cute and small Streamlit interface so I could paste a real Swedish legal document and see what the model thinks.
 
 ![Streamlit interface](/images/img_ui.png)
 
@@ -182,9 +182,9 @@ This is not only a demo. It is also a way to challenge the model and collect bet
 
 ## From Notebook to Production
 
-Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas — without needing the original 8,625 training documents.
+Once the model was trained, the important parts of the pipeline (the vocabulary, the feature settings, and the model weights) were saved into a single artefact. A new document can now be cleaned, turned into the same three representations, passed through the model, and returned with predicted legal areas, all without needing the original 8,625 training documents.
 
-That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system.”
+That changed the project from “I trained a model in a notebook” into “I have a component that can actually be plugged into another system like our Pipeline for Blendow-Noxtua.”
 
 ## What I Learned
 
@@ -194,10 +194,10 @@ The biggest lessons were about the data, not the neural network.
 The existing tags were created for editorial purposes, not for training a machine-learning model. A label that is useful for a human reader can still be noisy for a classifier. The model learns from the labels we give it, including their imperfections.
 
 **More information is not always better.**
-My first instinct was to give the model as much text as possible. Legal documents contain a great deal of material that has nothing to do with their broad legal area. Cleaning and selecting the right information became just as important as choosing the model itself.
+My first instinct was to give the model as much text as possible. Legal documents contain a great deal of material that has nothing to do with their broad legal area. Cleaning and selecting the right information became just as important as choosing the features itself.
 
 ## Where I Am Now
 
 The current system can take an unseen Swedish legal document and produce one or more predictions across the 18 main legal areas. The Streamlit app lets me inspect difficult cases, correct mistakes, and gradually improve the quality of the labels the model learns from.
 
-Next steps include building a more reliable manually reviewed validation set and, later, extending the system towards the 157 sub-areas.
+Next steps could include building a more reliable manually reviewed validation set and, later, extending the system towards the 157 sub-areas.
